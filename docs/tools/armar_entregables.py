@@ -178,15 +178,16 @@ def main():
         (DOCS / 'manual' / name).mkdir(parents=True, exist_ok=True)
     manual = subprocess.run([sys.executable, str(DOCS / 'tools' / 'armar_manual.py')], check=True, capture_output=True, text=True, encoding='utf-8')
     print(manual.stdout)
-    exe, pending_exe = execution()
+    # «Para ejecutar» es la guía paso a paso de armar_ejecutar.py (comprueba su formato contra la plantilla).
+    # La función execution() de este archivo queda solo como referencia: no se usa.
+    ejecutar = subprocess.run([sys.executable, str(DOCS / 'tools' / 'armar_ejecutar.py')], check=True, capture_output=True, text=True, encoding='utf-8')
+    print(ejecutar.stdout)
+    exe, pending_exe = OUT / 'Mirror Studio - para ejecutar.docx', []
     src, pending_src, inventory = source()
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     report = {'commit': revision, 'source_files': inventory,
               'pending_execution_images': pending_exe, 'pending_source_images': pending_src,
-              'execution_images': {
-                  'dependencies': 'ejecucion-dependencias.png' if (DOCS / 'manual/capturas/ejecucion-dependencias.png').exists() else '26-ayuda-red.png',
-                  'startup': 'ejecucion-app.png' if (DOCS / 'manual/capturas/ejecucion-app.png').exists() else '01-inicio.png',
-              },
+              'execution_images': sorted(p.name for p in (OUT / 'img').glob('ejecutar-*.png')) + ['01-inicio.png', '26-ayuda-red.png'],
               'manual_result': manual.stdout.splitlines()}
     (OUT / 'inventario-documentacion.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(f'Actualizados: {exe.name}; {src.name}')

@@ -1,16 +1,24 @@
 """Arma «Mirror Studio - para ejecutar.docx» a partir de la plantilla de PushProMaster.
 
+Es una guía paso a paso para personas sin experiencia técnica: instalar Git y Node.js, descargar el proyecto,
+ejecutarlo, o bajar directamente el ejecutable. Cada paso lleva su captura real.
+
 No crea un documento en blanco: abre la plantilla, sobrescribe el texto dentro de sus párrafos (conservando
-el formato del primer run), clona párrafos o filas de la plantilla cuando hace falta otro igual y cambia las
-dos capturas por las de Mirror Studio, en el mismo sitio y con el mismo ancho. Al final compara el formato
-del resultado con el de la plantilla y se detiene con error si algo distinto del texto o las imágenes cambió.
+el formato del primer run), clona párrafos o filas de la plantilla cuando hace falta otro igual (subpuntos,
+viñetas y párrafos de imagen) y pone las capturas con el ancho de las de la plantilla. Al final compara el
+formato del resultado con el de la plantilla y se detiene con error si algo distinto del texto, el número de
+imágenes o las propias imágenes cambió.
 
 Uso (desde la raíz del repositorio):
     python docs/tools/armar_ejecutar.py
 
-Capturas que usa (capturas reales de la terminal; se pueden reemplazar y volver a ejecutar el script):
-    docs/entregables/img/ejecutar-1-instalar.png     npm install + npm run build -w @mirror-studio/protocol
-    docs/entregables/img/ejecutar-2-npm-run-dev.png  npm run dev
+Capturas que usa (todas reales; se pueden reemplazar y volver a ejecutar el script):
+    docs/entregables/img/ejecutar-web-*.png           páginas de descarga, tomadas con Chrome (perfil limpio)
+                                                      y marcadas con docs/tools/anotar.py; sin marcar en img/originales/
+    docs/entregables/img/ejecutar-term-*.png          PowerShell: versiones instaladas y git clone
+    docs/entregables/img/ejecutar-1-instalar.png      npm install + npm run build -w @mirror-studio/protocol
+    docs/entregables/img/ejecutar-2-npm-run-dev.png   npm run dev
+    docs/manual/capturas/01-inicio.png, docs/manual/anotadas/26-ayuda-red.png  (del manual)
 
 Necesita python-docx, lxml y pillow.
 """
@@ -31,13 +39,22 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOCS = RAIZ / 'docs'
 PLANTILLA = next(DOCS.glob('pushpromaster - para para ejecutar_*.docx'))
 SALIDA = DOCS / 'entregables' / 'Mirror Studio - para ejecutar.docx'
-IMG_INSTALAR = DOCS / 'entregables' / 'img' / 'ejecutar-1-instalar.png'
-IMG_DEV = DOCS / 'entregables' / 'img' / 'ejecutar-2-npm-run-dev.png'
+IMG = DOCS / 'entregables' / 'img'
+IMG_INSTALAR = IMG / 'ejecutar-1-instalar.png'
+IMG_DEV = IMG / 'ejecutar-2-npm-run-dev.png'
+IMG_GIT = IMG / 'ejecutar-web-git.png'
+IMG_NODE = IMG / 'ejecutar-web-node.png'
+IMG_VERSIONES = IMG / 'ejecutar-term-versiones.png'
+IMG_CLONAR = IMG / 'ejecutar-term-clonar.png'
+IMG_GITHUB = IMG / 'ejecutar-web-github-code.png'
+IMG_RELEASE = IMG / 'ejecutar-web-release.png'
+IMG_INICIO = DOCS / 'manual' / 'capturas' / '01-inicio.png'
+IMG_AYUDA = DOCS / 'manual' / 'anotadas' / '26-ayuda-red.png'
+TODAS = [IMG_INSTALAR, IMG_DEV, IMG_GIT, IMG_NODE, IMG_VERSIONES, IMG_CLONAR, IMG_GITHUB, IMG_RELEASE, IMG_INICIO, IMG_AYUDA]
 
-URL_NODE = 'https://nodejs.org/'
+URL_NODE = 'https://nodejs.org/es/download'
+URL_RELEASE = 'https://github.com/HernanVilc4/mirror-studio/releases/latest'
 URL_REPO = 'https://github.com/HernanVilc4/mirror-studio.git'
-FIREWALL = ('netsh advfirewall firewall add rule name="Mirror Studio (dev)" dir=in action=allow '
-            'program="$PWD\\node_modules\\electron\\dist\\electron.exe" enable=yes profile=private,domain')
 
 R_ID = qn('r:id')
 R_EMBED = qn('r:embed')
@@ -108,10 +125,9 @@ def clonar_despues(p, texto=None):
 def cambiar_imagen(doc, run, ruta):
     """Cambia la imagen del run por `ruta`, con el mismo ancho que tenía en la plantilla y su propia proporción."""
     blip = run.find('.//a:blip', NS)
-    viejo = blip.get(R_EMBED)
     nuevo, _ = doc.part.get_or_add_image(str(ruta))
     blip.set(R_EMBED, nuevo)
-    doc.part.drop_rel(viejo)
+    # La imagen vieja no se suelta aquí: la comparten los párrafos clonados. Ver quitar_imagenes_sin_uso().
     ancho, alto = Image.open(ruta).size
     extent = run.find('.//wp:extent', NS)
     cx = int(extent.get('cx'))
@@ -125,6 +141,28 @@ def cambiar_imagen(doc, run, ruta):
         src.attrib.clear()
 
 
+def imagen_despues(doc, modelo, despues_de, ruta):
+    """Párrafo de solo imagen clonado del de la plantilla (mismo formato y ancho), con la captura `ruta`."""
+    nuevo = copy.deepcopy(modelo)
+    despues_de.addnext(nuevo)
+    cambiar_imagen(doc, nuevo.xpath('.//w:r[w:drawing]')[0], ruta)
+    return nuevo
+
+
+def quitar_imagenes_sin_uso(doc):
+    """Suelta las imágenes que ya no usa ningún párrafo (las capturas de la plantilla)."""
+    usadas = {b.get(R_EMBED) for b in doc.element.body.iter('{%s}blip' % NS['a'])}
+    for rid, rel in list(doc.part.rels.items()):
+        if rel.reltype.endswith('/image') and rid not in usadas:
+            del doc.part.rels[rid]
+
+
+def numerar_dibujos(body):
+    """Cada imagen necesita su propio id de dibujo; los párrafos clonados lo repetían."""
+    for i, pr in enumerate(body.iter('{%s}docPr' % NS['wp']), start=1):
+        pr.set('id', str(i))
+
+
 def quitar_restos_de_maquetacion(body):
     """lastRenderedPageBreak es solo una marca de dónde Word cortó la página la última vez; con texto nuevo ya no vale."""
     for el in list(body.iter(qn('w:lastRenderedPageBreak'))):
@@ -134,7 +172,7 @@ def quitar_restos_de_maquetacion(body):
 # ---------------------------------------------------------------- contenido
 
 def armar():
-    for img in (IMG_INSTALAR, IMG_DEV):
+    for img in TODAS:
         if not img.exists():
             sys.exit('Falta la captura %s' % img)
     doc = Document(str(PLANTILLA))
@@ -150,58 +188,129 @@ def armar():
     for i, inicio in esperado.items():
         if not texto_de(P[i]).startswith(inicio):
             sys.exit('La plantilla no tiene la forma esperada en el párrafo %d: %r' % (i, texto_de(P[i])))
+    modelo_sub = copy.deepcopy(P[10])        # subpunto (2.x) de la lista numerada
+    modelo_vineta = copy.deepcopy(P[11])     # viñeta bajo un subpunto
+    modelo_imagen = copy.deepcopy(P[14])     # párrafo de solo imagen
+
+    def sub(antes_de, texto):
+        nuevo = copy.deepcopy(modelo_sub)
+        antes_de.addprevious(nuevo)
+        escribir(nuevo, texto)
+        return nuevo
+
+    def vineta(despues_de, texto):
+        nuevo = copy.deepcopy(modelo_vineta)
+        despues_de.addnext(nuevo)
+        escribir(nuevo, texto)
+        return nuevo
+
+    def imagen(despues_de, ruta):
+        return imagen_despues(doc, modelo_imagen, despues_de, ruta)
 
     escribir(P[0], 'Para para ejecutar “Mirror Studio”')
 
     # 1. Requisitos Previos
-    escribir(P[2], 'Tener Windows 10 u 11 (Ubuntu también abre la aplicación, pero el control remoto solo '
-                   'funciona en Windows).')
-    escribir(P[3], 'Tener Git instalado (para descargar el proyecto, https://git-scm.com).')
-    escribir(P[4], 'Tener Node.js 22 LTS o superior instalado (https://nodejs.org).')
-    clonar_despues(P[4], 'Todas las PCs deben estar conectadas a la misma red local. La conexión a internet '
-                         'solo se necesita para la instalación.')
+    escribir(P[2], 'Una PC con Windows 10 u 11 de 64 bits. Ubuntu también abre la aplicación, pero el control '
+                   'remoto solo funciona en Windows.')
+    escribir(P[3], 'Conexión a Internet solo para descargar. Las reuniones funcionan sin Internet.')
+    escribir(P[4], 'Todas las PCs conectadas a la misma red local: la misma Wi-Fi, el mismo switch o cable, o '
+                   'el mismo hotspot.')
+    clonar_despues(P[4], 'Si solo quieres usar la aplicación, no necesitas instalar nada más: ve directamente '
+                         'al punto 3, «Ejecución desde archivo ejecutable». El punto 2 es para quien quiera '
+                         'ejecutar el código fuente.')
 
     # 2. Ejecución desde el código fuente
     escribir(P[6], 'Ejecución desde el código fuente')
-    escribir_con_enlace(doc, P[7], 'Instala Node.js, puedes hacerlo en ', URL_NODE,
-                        '. Al momento de desarrollar el programa se usaron Node.js 22 y 24.')
-    escribir(P[8], 'Asegúrate de dejar marcada la opción “Add to PATH” durante la instalación.')
-    escribir_con_enlace(doc, P[11], 'Puedes clonar el repositorio con Git (git clone ', URL_REPO,
-                        ') y luego entrar a la carpeta con cd mirror-studio. También puedes descargarlo como '
-                        'ZIP desde GitHub (Code → Download ZIP) y descomprimirlo.')
-    escribir(P[13], 'Abre una terminal o consola en la carpeta del proyecto y ejecuta: npm install y luego '
-                    'npm run build -w @mirror-studio/protocol')
+    escribir_con_enlace(doc, P[7], 'Se necesitan dos programas gratuitos: Git, que descarga el proyecto, y '
+                        'Node.js (', URL_NODE, '), que lo ejecuta. Instálalos en este orden, como se explica '
+                        'a continuación.')
+    escribir(P[8], 'Si ya los tienes instalados, ve directamente a «Comprobar la instalación».')
+
+    # 2.1 Instalar Git
+    s1 = sub(P[10], 'Instalar Git')
+    v = vineta(s1, 'Abre el navegador (Chrome, Edge u otro) y entra a https://git-scm.com/downloads/win. '
+                   'Pulsa «Click here to download» (1) para descargar el instalador de 64 bits.')
+    imagen(v, IMG_GIT)
+    v = vineta(v.getnext(), 'Abre el archivo descargado (Git-…-64-bit.exe) y, si Windows pregunta si quieres '
+                            'permitir cambios, pulsa «Sí». En el asistente no cambies nada: pulsa «Next» en '
+                            'cada pantalla, luego «Install» y al final «Finish».')
+
+    # 2.2 Instalar Node.js
+    s2 = sub(P[10], 'Instalar Node.js')
+    v = vineta(s2, 'Entra a https://nodejs.org/es/download. Comprueba que estén elegidos «Windows» y «x64» y '
+                   'pulsa «Windows Installer (.msi)» (1).')
+    imagen(v, IMG_NODE)
+    vineta(v.getnext(), 'Abre el archivo descargado (node-v…-x64.msi). Pulsa «Next», marca «I accept the '
+                        'terms in the License Agreement» y sigue con «Next» sin cambiar nada; así queda '
+                        'marcada la opción que lo añade al PATH. Pulsa «Install», acepta el aviso de Windows y '
+                        'al final «Finish».')
+
+    # 2.3 Comprobar la instalación
+    s3 = sub(P[10], 'Comprobar la instalación')
+    v = vineta(s3, 'Abre el menú Inicio, escribe PowerShell y ábrelo. Escribe estos comandos, uno por línea, y '
+                   'pulsa Enter después de cada uno: git --version, node --version y npm --version. Cada uno '
+                   'debe responder con un número de versión, como en la imagen.')
+    imagen(v, IMG_VERSIONES)
+
+    # 2.4 Descargar el proyecto (subpunto de la plantilla)
+    escribir(P[10], 'Descargar el proyecto')
+    escribir_con_enlace(doc, P[11], 'En la misma ventana de PowerShell escribe cd Documents, luego git clone ',
+                        URL_REPO, ' y por último cd mirror-studio. Se crea la carpeta Documentos\\mirror-studio '
+                        'con el proyecto.')
+    img = imagen(P[11], IMG_CLONAR)
+    v = vineta(img, 'Otra forma: en https://github.com/HernanVilc4/mirror-studio pulsa «Code» (1). Ahí está la '
+                    'dirección para clonar (2), y «Download ZIP» (3) descarga el proyecto comprimido; '
+                    'descomprímelo y abre PowerShell dentro de esa carpeta.')
+    imagen(v, IMG_GITHUB)
+
+    # 2.5 Instalar dependencias
+    escribir(P[13], 'Dentro de la carpeta del proyecto escribe npm install (descarga las librerías; la primera '
+                    'vez tarda unos minutos) y después npm run build -w @mirror-studio/protocol. Los avisos '
+                    '«warn» y el resumen de «vulnerabilities» son normales y no impiden usar la aplicación.')
     cambiar_imagen(doc, P[14].xpath('.//w:r[w:drawing]')[0], IMG_INSTALAR)
 
-    # 2.3: texto, salto de línea e imagen en el mismo párrafo, como en la plantilla.
+    # 2.6 Ejecutar: texto, salto de línea e imagen en el mismo párrafo, como en la plantilla.
     corrida_texto = P[15].find(qn('w:r'))
     corrida_salto = next(r for r in P[15].findall(qn('w:r')) if r.find(qn('w:br')) is not None)
     corrida_imagen = next(r for r in P[15].findall(qn('w:r')) if r.find(qn('w:drawing')) is not None)
     dejar_solo(P[15], [corrida_texto, corrida_salto, corrida_imagen])
-    poner_texto(corrida_texto, 'Ejecutar la aplicación desde la terminal usando: npm run dev. Se abrirá la '
-                               'ventana de Mirror Studio. También puedes abrir la carpeta del proyecto en Visual '
-                               'Studio Code y ejecutar los mismos comandos en su terminal:')
+    poner_texto(corrida_texto, 'Ejecutar la aplicación con: npm run dev. Se abre la ventana de Mirror Studio '
+                               '(imagen siguiente); deja la consola abierta mientras la uses. Para cerrarla, '
+                               'cierra la ventana o pulsa Ctrl+C en la consola:')
     cambiar_imagen(doc, corrida_imagen, IMG_DEV)
+    inicio = imagen(P[15], IMG_INICIO)
 
-    # 2.4: firewall, con un subpunto y una viñeta clonados de 2.2 (mismo formato).
-    sub = copy.deepcopy(P[12])
-    P[15].addnext(sub)
-    escribir(sub, 'Permitir la aplicación en el firewall (solo en la PC anfitriona)')
-    vineta = copy.deepcopy(P[13])
-    sub.addnext(vineta)
-    escribir(vineta, 'Una sola vez, abre PowerShell como administrador, entra a la carpeta del proyecto y '
-                     'ejecuta: ' + FIREWALL)
+    # 2.7 Firewall, con un subpunto y una viñeta como los de 2.5 (mismo formato).
+    s7 = copy.deepcopy(P[12])
+    inicio.addnext(s7)
+    escribir(s7, 'Permitir la aplicación en el firewall (solo en la PC que crea la reunión)')
+    v = copy.deepcopy(P[13])
+    s7.addnext(v)
+    escribir(v, 'En la pantalla principal pulsa «Ayuda de red»: muestra el comando exacto para ese equipo (1). '
+                'Cópialo, abre PowerShell como administrador (clic derecho sobre PowerShell → «Ejecutar como '
+                'administrador»), pégalo y pulsa Enter. Se hace una sola vez.')
+    imagen(v, IMG_AYUDA)
 
     # 3. Ejecución desde archivo ejecutable (.exe)
-    escribir(P[17], 'Generar el archivo .exe')
-    escribir(P[18], 'En la carpeta del proyecto ejecuta npm run dist:portable. Se crea el archivo '
-                    'release/Mirror-Studio-win32-x64.zip; descomprímelo donde quieras y dentro encontrarás '
-                    'Mirror Studio.exe.')
-    clonar_despues(P[18], 'Si prefieres un instalador, ejecuta npm run dist -w @mirror-studio/desktop. El '
-                          'instalador queda como release/Mirror Studio Setup 0.1.0.exe.')
-    # P[19] «Ejecutar», P[20] «Haz doble clic sobre el archivo .exe.» y P[21] (SmartScreen) ya sirven tal cual.
+    escribir(P[17], 'Descargar Mirror Studio')
+    escribir(P[18], 'Entra a https://github.com/HernanVilc4/mirror-studio/releases/latest y, en «Assets», '
+                    'pulsa «Mirror-Studio-win32-x64.zip» (1). Es la versión portable: no instala nada y '
+                    'funciona aunque Windows 11 tenga activado el Control inteligente de aplicaciones.')
+    img = imagen(P[18], IMG_RELEASE)
+    v = clonar_despues(P[18], 'Busca el archivo en la carpeta Descargas, haz clic derecho sobre él y elige '
+                              '«Extraer todo» → «Extraer». No abras el programa desde dentro del zip.')
+    img.addprevious(P[18])  # orden: texto, imagen, viñetas siguientes
+    img.addnext(v)
+    clonar_despues(v, 'En la misma página está el instalador (Mirror-Studio-Setup-0.1.0.exe), que crea accesos '
+                      'directos y la regla del firewall. No está firmado digitalmente: si Windows lo bloquea, '
+                      'usa la versión portable.')
+    escribir(P[20], 'Abre la carpeta extraída y haz doble clic en Mirror Studio.exe. Se abre la pantalla '
+                    'principal (punto 2.6).')
+    escribir(P[21], 'Importante: el programa no está firmado digitalmente, por eso Windows puede mostrar «Windows '
+                    'protegió su PC» (SmartScreen). Pulsa «Más información» y luego «Ejecutar de todos modos». '
+                    'Hazlo solo con el archivo descargado de la página oficial del proyecto.')
 
-    # 3.2 Tabla de errores: filas 1 y 3 nuevas, fila 2 (SmartScreen) igual, y una fila más clonada de la 3.
+    # Tabla de errores: filas de la plantilla reescritas y dos más clonadas de la última.
     filas = tabla.findall(qn('w:tr'))
 
     def fila(tr, problema, solucion):
@@ -209,18 +318,27 @@ def armar():
         escribir(c1.find(qn('w:p')), problema)
         escribir(c2.find(qn('w:p')), solucion)
 
-    fila(filas[1], 'Node.js o npm no se reconoce como comando',
-         'Instala Node.js 22 LTS o superior y abre una terminal nueva. Si sigue apareciendo, reinstálalo '
-         'dejando marcada la opción “Add to PATH”.')
-    fila(filas[3], 'La otra PC no ve la reunión o no puede entrar',
-         'Crea la regla del firewall en la PC anfitriona (punto 2.4) y pon la red con el perfil Privada. Si la '
-         'reunión no aparece en la lista, usa Unirse con IP y código.')
+    fila(filas[1], '«git», «node» o «npm» no se reconoce como comando',
+         'Cierra PowerShell y vuelve a abrirlo. Si sigue, reinstala ese programa dejando todas las opciones '
+         'como vienen.')
+    fila(filas[2], '«Windows protegió su PC» (SmartScreen)',
+         'Pulsa «Más información» y luego «Ejecutar de todos modos». Aparece porque el programa no está '
+         'firmado digitalmente.')
+    fila(filas[3], '«Una directiva de Control de aplicaciones bloqueó este archivo»',
+         'Windows 11 con el Control inteligente de aplicaciones activado bloquea el instalador. Usa la versión '
+         'portable: Mirror-Studio-win32-x64.zip.')
     extra = copy.deepcopy(filas[3])
     filas[3].addnext(extra)
-    fila(extra, 'Aparece “El puerto 47800 ya está en uso”',
-         'Hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala (o cierra electron.exe en el '
-         'Administrador de tareas) y vuelve a abrir la aplicación.')
+    fila(extra, 'La otra PC no ve la reunión o no puede entrar',
+         'Permite la aplicación en el firewall de la PC que crea la reunión (punto 2.7) y pon la red con el '
+         'perfil Privada. Si la reunión no aparece en la lista, usa «Unirse con IP y código».')
+    extra2 = copy.deepcopy(extra)
+    extra.addnext(extra2)
+    fila(extra2, 'Aparece «El puerto 47800 ya está en uso»',
+         'Hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala y vuelve a abrir la aplicación.')
 
+    numerar_dibujos(body)
+    quitar_imagenes_sin_uso(doc)
     quitar_restos_de_maquetacion(body)
 
     cp = doc.core_properties
@@ -296,7 +414,8 @@ def comprobar(plantilla, salida, prohibido):
         fallos.append('tabla')
     print('  imágenes: %d en la plantilla, %d en el resultado; anchos %s -> %s'
           % (len(a['imagenes']), len(b['imagenes']), [x[0] for x in a['imagenes']], [x[0] for x in b['imagenes']]))
-    if len(a['imagenes']) != len(b['imagenes']) or [x[0] for x in a['imagenes']] != [x[0] for x in b['imagenes']]:
+    # La guía lleva más capturas que la plantilla: todas deben tener uno de los anchos de las de la plantilla.
+    if not b['imagenes'] or {x[0] for x in b['imagenes']} - {x[0] for x in a['imagenes']}:
         fallos.append('imágenes')
     viejas = a['medios'] & b['medios']
     print('  capturas de la plantilla que siguen dentro:', len(viejas))
