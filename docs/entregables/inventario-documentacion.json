@@ -59,10 +59,18 @@
   ],
   "pending_execution_images": [],
   "pending_source_images": [],
-  "execution_images": {
-    "dependencies": "26-ayuda-red.png",
-    "startup": "01-inicio.png"
-  },
+  "execution_images": [
+    "ejecutar-1-instalar.png",
+    "ejecutar-2-npm-run-dev.png",
+    "ejecutar-term-clonar.png",
+    "ejecutar-term-versiones.png",
+    "ejecutar-web-git.png",
+    "ejecutar-web-github-code.png",
+    "ejecutar-web-node.png",
+    "ejecutar-web-release.png",
+    "01-inicio.png",
+    "26-ayuda-red.png"
+  ],
   "manual_result": [
     "Listo: D:\\mirror-studio\\docs\\entregables\\Mirror Studio - manual de uso.docx (31 capturas puestas)",
     "Captura 27 -> se usa la 10",
@@ -90,5 +98,10 @@
   ],
   "manual_unique_captures": 27,
   "manual_pending_captures": [],
-  "visual_word_review": "No realizada: el servicio para localizar el runtime de renderizado no estuvo disponible."
+  "visual_word_review": "No realizada: el servicio para localizar el runtime de renderizado no estuvo disponible.",
+  "word_sha256": {
+    "Mirror Studio - codigo fuente.docx": "2908edd79e5ec8565cdddcdc6a5d25dfff3b8e12c4aedb4c9ab2a9d12b8f5ab7",
+    "Mirror Studio - manual de uso.docx": "bd4491978b7dab7d1b0c6c615d710d8efbd6693662176f50e4ecc2bf4c676b0f",
+    "Mirror Studio - para ejecutar.docx": "4ba752e7bb8ac297fcf2b61fb077efea3ee449684257d57c1cc45407b1d6d38e"
+  }
 }
