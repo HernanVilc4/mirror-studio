@@ -1,0 +1,94 @@
+{
+  "commit": "4e9de1b87ed87e9bd226bd0d7f89e2a031173561",
+  "source_files": [
+    {
+      "path": "packages/protocol/src/index.ts",
+      "sha256": "d1a945189a8a676348201cef36f569d354b1b9deb05b01f820c3af1e040f9aa2",
+      "lines": 202
+    },
+    {
+      "path": "packages/protocol/src/node.ts",
+      "sha256": "ac068db55709194382496ad96de4e3645c5b4a653e127a4856caba204bf9e5ab",
+      "lines": 130
+    },
+    {
+      "path": "apps/desktop/src/main/index.ts",
+      "sha256": "0f0dd15da2b4e4f390b119c2b340a5e4d0ac009c656c5b7f1971f9786fb5d547",
+      "lines": 144
+    },
+    {
+      "path": "apps/desktop/src/main/meeting.ts",
+      "sha256": "1a6c57f3244240fc502b9b7c6fcfb8d191d9c5c166aecb91d8f0e0dacec76d33",
+      "lines": 217
+    },
+    {
+      "path": "apps/desktop/src/main/meeting-net.ts",
+      "sha256": "d1d8c9998accc6c0da8a03d0518428d2f866c63ba44880cb6389486dacebe2bb",
+      "lines": 193
+    },
+    {
+      "path": "apps/desktop/src/main/network.ts",
+      "sha256": "44a80c2819567990cd41acda44cf9b8bdd536d3b4b4481817750acc0fe93aaf6",
+      "lines": 97
+    },
+    {
+      "path": "apps/desktop/src/main/input.ts",
+      "sha256": "2efe42fd48b7a7788f64f3a9dca75292a6c13b010741c65dd259159a6b3cae07",
+      "lines": 291
+    },
+    {
+      "path": "apps/desktop/src/preload/index.ts",
+      "sha256": "149a6908f4abd872e0e2fa5f5c72430480c74eb1e44453e80042449c15aa6aef",
+      "lines": 41
+    },
+    {
+      "path": "apps/desktop/src/renderer/src/controller.ts",
+      "sha256": "e0042321452f843084c69d6c30183b011c7fc0be2b42538922cf8fbc26d3efdb",
+      "lines": 312
+    },
+    {
+      "path": "apps/desktop/src/renderer/src/media.ts",
+      "sha256": "71f67a530a9a302f3064951588c67aaff04a42b021f16074eefccaa8222d25c1",
+      "lines": 203
+    },
+    {
+      "path": "apps/desktop/src/renderer/src/App.tsx",
+      "sha256": "d5c333cff4a7c9edba38439b6e0f2e2e477f671e3545649347d42dc84b51da5b",
+      "lines": 784
+    }
+  ],
+  "pending_execution_images": [],
+  "pending_source_images": [],
+  "execution_images": {
+    "dependencies": "26-ayuda-red.png",
+    "startup": "01-inicio.png"
+  },
+  "manual_result": [
+    "Listo: D:\\mirror-studio\\docs\\entregables\\Mirror Studio - manual de uso.docx (31 capturas puestas)",
+    "Captura 27 -> se usa la 10",
+    "No falta ninguna captura."
+  ],
+  "verification": [
+    {
+      "file": "Mirror Studio - manual de uso.docx",
+      "images": 31,
+      "template_styles_and_page_preserved": true,
+      "sha256": "bd4491978b7dab7d1b0c6c615d710d8efbd6693662176f50e4ecc2bf4c676b0f"
+    },
+    {
+      "file": "Mirror Studio - para ejecutar.docx",
+      "images": 2,
+      "template_styles_and_page_preserved": true,
+      "sha256": "11e53eca0b7ad9d69970e5a64d4a145a73c8300b87ef78788ac02fff86980a15"
+    },
+    {
+      "file": "Mirror Studio - codigo fuente.docx",
+      "images": 1,
+      "template_styles_and_page_preserved": true,
+      "sha256": "2908edd79e5ec8565cdddcdc6a5d25dfff3b8e12c4aedb4c9ab2a9d12b8f5ab7"
+    }
+  ],
+  "manual_unique_captures": 27,
+  "manual_pending_captures": [],
+  "visual_word_review": "No realizada: el servicio para localizar el runtime de renderizado no estuvo disponible."
+}
