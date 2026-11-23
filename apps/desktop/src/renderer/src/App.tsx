@@ -326,7 +326,7 @@ function Home() {
 
       <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-bar/90 px-5 py-2 text-xs backdrop-blur">
         <StatusPill tone={net?.chosen ? 'ok' : 'warn'} icon="network">
-          {net?.chosen ? <>Red <b className="font-mono text-fg">{net.chosen}</b>{net.ifaces.length > 1 && <span className="text-muted"> · {net.ifaces.length} adaptadores</span>}</> : 'Sin red: conecta el cable Ethernet'}
+          {net?.chosen ? <>Red <b className="font-mono text-fg">{net.chosen}</b>{net.ifaces.length > 1 && <span className="text-muted"> · {net.ifaces.length} adaptadores</span>}</> : 'Sin red: conecta esta PC a una red local (cable o Wi-Fi)'}
         </StatusPill>
         <StatusPill tone={fw === 'ok' ? 'ok' : fw === 'missing' ? 'warn' : 'idle'} icon="shield" onClick={fw === 'ok' ? undefined : () => setHelp(true)}>
           Firewall {fw === 'ok' ? 'permitido' : fw === 'missing' ? 'bloqueado: ver cómo abrirlo' : 'sin verificar'}
@@ -383,7 +383,7 @@ function NetworkHelp({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Red y firewall" onClose={onClose}>
       <div className="flex flex-col gap-3 text-sm text-muted">
-        <p>MirrorStudio funciona solo por <b className="text-fg">cable Ethernet</b> dentro de la misma red. El puerto es <b className="text-fg">{net.port}</b> (TCP).</p>
+        <p>MirrorStudio funciona entre PCs de la <b className="text-fg">misma red local</b>: cable Ethernet, Wi-Fi o un mismo hotspot (el cable es lo más estable). El puerto es <b className="text-fg">{net.port}</b> (TCP).</p>
         <p>Direcciones de este equipo: {net.ifaces.length ? net.ifaces.map((i) => <code key={i.address} className="mr-2 rounded bg-bg px-1">{i.name}: {i.address}</code>) : 'ninguna'}</p>
         <p>Si otros equipos no pueden unirse, permite el programa en el firewall de Windows (como administrador, una sola vez):</p>
         <code className="select-all break-all rounded bg-bg p-2 text-xs text-fg">{net.firewallCommand}</code>
