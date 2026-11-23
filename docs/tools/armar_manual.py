@@ -298,7 +298,10 @@ def main():
             doc.part.rels.pop(rid)
 
     cp = doc.core_properties
-    cp.last_modified_by = ''
+    # Propiedades del archivo (Archivo → Información): sin restos de la plantilla ni de python-docx.
+    cp.title = 'Mirror Studio 0.1.0 – Manual de uso'
+    cp.author = cp.last_modified_by = 'Mirror Studio'
+    cp.subject = cp.keywords = cp.category = cp.comments = ''
     cp.modified = datetime.now(timezone.utc).replace(microsecond=0, tzinfo=None)
 
     SALIDA.parent.mkdir(parents=True, exist_ok=True)

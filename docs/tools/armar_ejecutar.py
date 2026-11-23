@@ -53,7 +53,7 @@ IMG_AYUDA = DOCS / 'manual' / 'anotadas' / '26-ayuda-red.png'
 TODAS = [IMG_INSTALAR, IMG_DEV, IMG_GIT, IMG_NODE, IMG_VERSIONES, IMG_CLONAR, IMG_GITHUB, IMG_RELEASE, IMG_INICIO, IMG_AYUDA]
 
 URL_NODE = 'https://nodejs.org/es/download'
-URL_RELEASE = 'https://github.com/HernanVilc4/mirror-studio/releases/latest'
+URL_RELEASE = 'https://github.com/HernanVilc4/mirror-studio/releases/tag/v0.1.0'
 URL_REPO = 'https://github.com/HernanVilc4/mirror-studio.git'
 
 R_ID = qn('r:id')
@@ -210,26 +210,34 @@ def armar():
     escribir(P[0], 'Para para ejecutar “Mirror Studio”')
 
     # 1. Requisitos Previos
-    escribir(P[2], 'Una PC con Windows 10 u 11 de 64 bits. Ubuntu también abre la aplicación, pero el control '
-                   'remoto solo funciona en Windows.')
+    escribir(P[2], 'Mirror Studio sirve para hacer reuniones entre computadoras de una misma red local: presentar la '
+                   'pantalla y, con permiso, controlar otra PC. Se necesita una PC con Windows 10 u 11 de 64 bits por '
+                   'cada persona, con Mirror Studio abierto en todas; para probar una reunión hacen falta al menos '
+                   'dos PCs. En Ubuntu se puede ejecutar desde el código fuente, pero el control remoto y el sonido '
+                   'de la PC solo funcionan en Windows.')
     escribir(P[3], 'Conexión a Internet solo para descargar. Las reuniones funcionan sin Internet.')
-    escribir(P[4], 'Todas las PCs conectadas a la misma red local: la misma Wi-Fi, el mismo switch o cable, o '
-                   'el mismo hotspot.')
+    escribir(P[4], 'Todas las PCs conectadas a la misma red local (la red de un mismo lugar, sin pasar por Internet): '
+                   'de preferencia por cable Ethernet al mismo switch (el aparato al que llegan los cables de red); '
+                   'también sirve la misma Wi-Fi o un mismo hotspot (la Wi-Fi que comparte un celular u otra PC), si '
+                   'esa red no aísla los equipos entre sí.')
     clonar_despues(P[4], 'Si solo quieres usar la aplicación, no necesitas instalar nada más: ve directamente '
                          'al punto 3, «Ejecución desde archivo ejecutable». El punto 2 es para quien quiera '
-                         'ejecutar el código fuente.')
+                         'ejecutar el código fuente (las instrucciones del programa tal como se escribieron), por '
+                         'ejemplo para revisarlo.')
 
     # 2. Ejecución desde el código fuente
     escribir(P[6], 'Ejecución desde el código fuente')
-    escribir_con_enlace(doc, P[7], 'Se necesitan dos programas gratuitos: Git, que descarga el proyecto, y '
-                        'Node.js (', URL_NODE, '), que lo ejecuta. Instálalos en este orden, como se explica '
-                        'a continuación.')
-    escribir(P[8], 'Si ya los tienes instalados, ve directamente a «Comprobar la instalación».')
+    escribir_con_enlace(doc, P[7], 'Se necesitan dos programas gratuitos: Git (https://git-scm.com), que descarga '
+                        'el proyecto, y Node.js versión 22 o superior (', URL_NODE, '), que lo ejecuta; Node.js '
+                        'trae incluido npm, el programa que descarga los componentes que Mirror Studio necesita. '
+                        'Instálalos en este orden, como se explica a continuación.')
+    escribir(P[8], 'Si ya los tienes instalados, ve directamente al punto 2.3, «Comprobar la instalación».')
 
     # 2.1 Instalar Git
     s1 = sub(P[10], 'Instalar Git')
-    v = vineta(s1, 'Abre el navegador (Chrome, Edge u otro) y entra a https://git-scm.com/downloads/win. '
-                   'Pulsa «Click here to download» (1) para descargar el instalador de 64 bits.')
+    v = vineta(s1, 'Abre el navegador (Chrome, Edge u otro) y entra a https://git-scm.com/downloads/win. Pulsa '
+                   '«Click here to download» («haz clic aquí para descargar») (1); se descarga el instalador para '
+                   'Windows de 64 bits.')
     imagen(v, IMG_GIT)
     v = vineta(v.getnext(), 'Abre el archivo descargado (Git-…-64-bit.exe) y, si Windows pregunta si quieres '
                             'permitir cambios, pulsa «Sí». En el asistente no cambies nada: pulsa «Next» en '
@@ -237,36 +245,50 @@ def armar():
 
     # 2.2 Instalar Node.js
     s2 = sub(P[10], 'Instalar Node.js')
-    v = vineta(s2, 'Entra a https://nodejs.org/es/download. Comprueba que estén elegidos «Windows» y «x64» y '
-                   'pulsa «Windows Installer (.msi)» (1).')
+    v = vineta(s2, 'Entra a https://nodejs.org/es/download. Deja la versión que la página propone, marcada como '
+                   'LTS (versión de soporte prolongado, la más estable). Comprueba que estén elegidos «Windows» y '
+                   '«x64» y pulsa «Windows Installer (.msi)» (1). No hace falta copiar los comandos que la página '
+                   'muestra más arriba.')
     imagen(v, IMG_NODE)
-    vineta(v.getnext(), 'Abre el archivo descargado (node-v…-x64.msi). Pulsa «Next», marca «I accept the '
-                        'terms in the License Agreement» y sigue con «Next» sin cambiar nada; así queda '
-                        'marcada la opción que lo añade al PATH. Pulsa «Install», acepta el aviso de Windows y '
-                        'al final «Finish».')
+    vineta(v.getnext(), 'Abre el archivo descargado (node-v…-x64.msi). Pulsa «Next», marca «I accept the terms in '
+                        'the License Agreement» y sigue con «Next» sin cambiar nada; así queda marcada la opción '
+                        '«Add to PATH», que permite a Windows encontrar Node.js cuando escribas sus comandos. Pulsa '
+                        '«Install», responde «Sí» al aviso de Windows y al final pulsa «Finish».')
 
     # 2.3 Comprobar la instalación
     s3 = sub(P[10], 'Comprobar la instalación')
-    v = vineta(s3, 'Abre el menú Inicio, escribe PowerShell y ábrelo. Escribe estos comandos, uno por línea, y '
-                   'pulsa Enter después de cada uno: git --version, node --version y npm --version. Cada uno '
-                   'debe responder con un número de versión, como en la imagen.')
+    v = vineta(s3, 'Abre el menú Inicio, escribe PowerShell y ábrelo; es una ventana donde se escriben órdenes '
+                   '(comandos) con el teclado. Si ya tenías una abierta antes de instalar, ciérrala y abre una nueva. '
+                   'Escribe estos comandos, uno por uno, y pulsa Enter después de cada uno: git --version, '
+                   'node --version y npm --version. Cada uno debe responder con un número de versión, como en la '
+                   'imagen; el de node debe empezar por v22 o un número mayor.')
     imagen(v, IMG_VERSIONES)
 
     # 2.4 Descargar el proyecto (subpunto de la plantilla)
     escribir(P[10], 'Descargar el proyecto')
-    escribir_con_enlace(doc, P[11], 'En la misma ventana de PowerShell escribe cd Documents, luego git clone ',
-                        URL_REPO, ' y por último cd mirror-studio. Se crea la carpeta Documentos\\mirror-studio '
-                        'con el proyecto.')
+    escribir_con_enlace(doc, P[11], 'En la misma ventana de PowerShell escribe cd Documents y pulsa Enter (cd '
+                        'significa «entrar a la carpeta»; Documents es tu carpeta Documentos). Luego escribe '
+                        'git clone ', URL_REPO, ' y pulsa Enter: «clonar» es descargar una copia completa del '
+                        'proyecto desde GitHub, el sitio web donde está publicado. Por último escribe '
+                        'cd mirror-studio y pulsa Enter. El proyecto queda en la carpeta Documentos\\mirror-studio.')
     img = imagen(P[11], IMG_CLONAR)
-    v = vineta(img, 'Otra forma: en https://github.com/HernanVilc4/mirror-studio pulsa «Code» (1). Ahí está la '
-                    'dirección para clonar (2), y «Download ZIP» (3) descarga el proyecto comprimido; '
-                    'descomprímelo y abre PowerShell dentro de esa carpeta.')
+    v = vineta(img, 'Otra forma, sin usar git clone: en https://github.com/HernanVilc4/mirror-studio pulsa «Code» '
+                    '(1). Ahí está la misma dirección que usa git clone (2), y «Download ZIP» (3) descarga el '
+                    'proyecto comprimido (mirror-studio-main.zip). Haz clic derecho sobre él → «Extraer todo» → '
+                    '«Extraer», entra a la carpeta extraída hasta ver el archivo package.json, haz clic derecho en '
+                    'un espacio vacío y elige «Abrir en Terminal» (en Windows 10: Mayús + clic derecho → «Abrir la '
+                    'ventana de PowerShell aquí»).')
     imagen(v, IMG_GITHUB)
 
     # 2.5 Instalar dependencias
-    escribir(P[13], 'Dentro de la carpeta del proyecto escribe npm install (descarga las librerías; la primera '
-                    'vez tarda unos minutos) y después npm run build -w @mirror-studio/protocol. Los avisos '
-                    '«warn» y el resumen de «vulnerabilities» son normales y no impiden usar la aplicación.')
+    escribir(P[13], 'En la misma ventana (ya dentro de la carpeta mirror-studio) escribe npm install y pulsa Enter: '
+                    'descarga los componentes que el programa necesita y la primera vez tarda unos minutos. Después '
+                    'escribe npm run build -w @mirror-studio/protocol y pulsa Enter: prepara una parte interna del '
+                    'programa. Los mensajes en inglés «npm warn» y el resumen de «vulnerabilities» son avisos de npm, '
+                    'no errores, y no impiden usar la aplicación; no ejecutes «npm audit fix», que la pantalla '
+                    'sugiere, porque puede cambiar versiones del proyecto. (Las imágenes de este punto y del '
+                    'siguiente se tomaron en «Símbolo del sistema»; en PowerShell los comandos y los resultados son '
+                    'los mismos.)')
     cambiar_imagen(doc, P[14].xpath('.//w:r[w:drawing]')[0], IMG_INSTALAR)
 
     # 2.6 Ejecutar: texto, salto de línea e imagen en el mismo párrafo, como en la plantilla.
@@ -274,41 +296,59 @@ def armar():
     corrida_salto = next(r for r in P[15].findall(qn('w:r')) if r.find(qn('w:br')) is not None)
     corrida_imagen = next(r for r in P[15].findall(qn('w:r')) if r.find(qn('w:drawing')) is not None)
     dejar_solo(P[15], [corrida_texto, corrida_salto, corrida_imagen])
-    poner_texto(corrida_texto, 'Ejecutar la aplicación con: npm run dev. Se abre la ventana de Mirror Studio '
-                               '(imagen siguiente); deja la consola abierta mientras la uses. Para cerrarla, '
-                               'cierra la ventana o pulsa Ctrl+C en la consola:')
+    poner_texto(corrida_texto, 'Ejecutar la aplicación con: npm run dev (escríbelo y pulsa Enter). La consola '
+                               'muestra «start electron app...» (primera imagen) y, unos segundos después, se abre '
+                               'la ventana de Mirror Studio (segunda imagen). Deja PowerShell abierto mientras uses '
+                               'la aplicación. Para cerrarla, cierra la ventana de Mirror Studio o pulsa Ctrl+C en '
+                               'PowerShell. Otro día, abre PowerShell, escribe cd Documents\\mirror-studio y luego '
+                               'npm run dev:')
     cambiar_imagen(doc, corrida_imagen, IMG_DEV)
     inicio = imagen(P[15], IMG_INICIO)
 
     # 2.7 Firewall, con un subpunto y una viñeta como los de 2.5 (mismo formato).
     s7 = copy.deepcopy(P[12])
     inicio.addnext(s7)
-    escribir(s7, 'Permitir la aplicación en el firewall (solo en la PC que crea la reunión)')
+    escribir(s7, 'Permitir la aplicación en el firewall (imprescindible en la PC que crea la reunión)')
     v = copy.deepcopy(P[13])
     s7.addnext(v)
-    escribir(v, 'En la pantalla principal pulsa «Ayuda de red»: muestra el comando exacto para ese equipo (1). '
-                'Cópialo, abre PowerShell como administrador (clic derecho sobre PowerShell → «Ejecutar como '
-                'administrador»), pégalo y pulsa Enter. Se hace una sola vez.')
+    escribir(v, 'El firewall es la protección de Windows que bloquea las conexiones que llegan de otras PCs; sin '
+                'este paso, los demás no pueden unirse. En la pantalla principal pulsa «Ayuda de red»: la ventana '
+                '«Red y firewall» muestra el comando exacto para ese equipo (1). Haz clic sobre el comando (se '
+                'selecciona completo) y pulsa Ctrl+C. Luego, en el menú Inicio, escribe PowerShell, haz clic '
+                'derecho sobre el resultado → «Ejecutar como administrador» y responde «Sí». Pega el comando con '
+                'clic derecho (o Ctrl+V) y pulsa Enter; debe responder «Aceptar.». Al volver a abrir Mirror Studio, '
+                'el pie dirá «Firewall permitido». Se hace una vez por cada copia del programa: si mueves la '
+                'carpeta o usas la versión portable, repítelo.')
     imagen(v, IMG_AYUDA)
 
     # 3. Ejecución desde archivo ejecutable (.exe)
     escribir(P[17], 'Descargar Mirror Studio')
-    escribir(P[18], 'Entra a https://github.com/HernanVilc4/mirror-studio/releases/latest y, en «Assets», '
-                    'pulsa «Mirror-Studio-win32-x64.zip» (1). Es la versión portable: no instala nada y '
-                    'funciona aunque Windows 11 tenga activado el Control inteligente de aplicaciones.')
+    escribir(P[18], 'Entra a ' + URL_RELEASE + ' (página de la versión 0.1.0) y, al final, en «Assets» '
+                    '(archivos), pulsa «Mirror-Studio-win32-x64.zip» (1), de unos 130 MB. Es la versión portable: '
+                    'no se instala, se usa directamente desde su carpeta, y funciona aunque Windows 11 tenga '
+                    'activado el Control inteligente de aplicaciones (una protección que bloquea programas sin '
+                    'firma digital).')
     img = imagen(P[18], IMG_RELEASE)
     v = clonar_despues(P[18], 'Busca el archivo en la carpeta Descargas, haz clic derecho sobre él y elige '
-                              '«Extraer todo» → «Extraer». No abras el programa desde dentro del zip.')
+                              '«Extraer todo» → «Extraer». Un .zip es un archivo comprimido: hay que extraerlo '
+                              'completo; no abras el programa desde dentro del .zip.')
     img.addprevious(P[18])  # orden: texto, imagen, viñetas siguientes
     img.addnext(v)
-    clonar_despues(v, 'En la misma página está el instalador (Mirror-Studio-Setup-0.1.0.exe), que crea accesos '
-                      'directos y la regla del firewall. No está firmado digitalmente: si Windows lo bloquea, '
-                      'usa la versión portable.')
-    escribir(P[20], 'Abre la carpeta extraída y haz doble clic en Mirror Studio.exe. Se abre la pantalla '
-                    'principal (punto 2.6).')
-    escribir(P[21], 'Importante: el programa no está firmado digitalmente, por eso Windows puede mostrar «Windows '
-                    'protegió su PC» (SmartScreen). Pulsa «Más información» y luego «Ejecutar de todos modos». '
-                    'Hazlo solo con el archivo descargado de la página oficial del proyecto.')
+    clonar_despues(v, 'En la misma página está el instalador (Mirror-Studio-Setup-0.1.0.exe): instala el programa '
+                      'para todos los usuarios, crea accesos directos y permite el programa en el firewall (punto '
+                      '2.7) automáticamente; pide permiso de administrador. No tiene firma digital (el sello que '
+                      'identifica al fabricante ante Windows): si Windows muestra «Una directiva de Control de '
+                      'aplicaciones bloqueó este archivo», usa la versión portable.')
+    escribir(P[20], 'Abre la carpeta extraída Mirror-Studio-win32-x64 y, dentro, la carpeta del mismo nombre. Haz '
+                    'doble clic en Mirror Studio (tipo «Aplicación»; se ve como Mirror Studio.exe si Windows '
+                    'muestra las extensiones; es normal que su icono no sea el logotipo de Mirror Studio). Se abre '
+                    'la pantalla principal, igual a la segunda imagen del punto 2.6. En la PC que creará la reunión '
+                    'haz también el punto 2.7 (firewall): el comando de «Ayuda de red» es distinto para esta copia '
+                    'del programa.')
+    escribir(P[21], 'Importante: el programa no tiene firma digital; por eso Windows puede mostrar «Windows protegió '
+                    'su PC» (SmartScreen, el filtro de seguridad de Windows). Pulsa «Más información» y luego '
+                    '«Ejecutar de todos modos». Hazlo solo con el archivo descargado de la página oficial del '
+                    'proyecto.')
 
     # Tabla de errores: filas de la plantilla reescritas y dos más clonadas de la última.
     filas = tabla.findall(qn('w:tr'))
@@ -318,32 +358,37 @@ def armar():
         escribir(c1.find(qn('w:p')), problema)
         escribir(c2.find(qn('w:p')), solucion)
 
-    fila(filas[1], '«git», «node» o «npm» no se reconoce como comando',
+    fila(filas[1], "PowerShell responde «El término 'git' (o 'node', 'npm') no se reconoce como nombre de un "
+                   "cmdlet…»",
          'Cierra PowerShell y vuelve a abrirlo. Si sigue, reinstala ese programa dejando todas las opciones '
          'como vienen.')
     fila(filas[2], '«Windows protegió su PC» (SmartScreen)',
-         'Pulsa «Más información» y luego «Ejecutar de todos modos». Aparece porque el programa no está '
-         'firmado digitalmente.')
+         'Pulsa «Más información» y luego «Ejecutar de todos modos». Aparece porque el programa no tiene firma '
+         'digital.')
     fila(filas[3], '«Una directiva de Control de aplicaciones bloqueó este archivo»',
          'Windows 11 con el Control inteligente de aplicaciones activado bloquea el instalador. Usa la versión '
          'portable: Mirror-Studio-win32-x64.zip.')
     extra = copy.deepcopy(filas[3])
     filas[3].addnext(extra)
     fila(extra, 'La otra PC no ve la reunión o no puede entrar',
-         'Permite la aplicación en el firewall de la PC que crea la reunión (punto 2.7) y pon la red con el '
-         'perfil Privada. Si la reunión no aparece en la lista, usa «Unirse con IP y código».')
+         'Permite la aplicación en el firewall (punto 2.7) y pon la red como privada: Configuración → Red e '
+         'Internet → Wi-Fi o Ethernet → propiedades de la red → «Tipo de perfil de red» → «Red privada». Si la '
+         'reunión no aparece en la lista, usa «Unirse con IP y código».')
     extra2 = copy.deepcopy(extra)
     extra.addnext(extra2)
     fila(extra2, 'Aparece «El puerto 47800 ya está en uso»',
-         'Hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala y vuelve a abrir la aplicación.')
+         'Ya hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala (si no la ves, ciérrala desde el '
+         'Administrador de tareas, Ctrl+Mayús+Esc) y vuelve a intentarlo.')
 
     numerar_dibujos(body)
     quitar_imagenes_sin_uso(doc)
     quitar_restos_de_maquetacion(body)
 
     cp = doc.core_properties
+    cp.title = 'Mirror Studio 0.1.0 – Para ejecutar'
     cp.author = 'Mirror Studio'
     cp.last_modified_by = 'Mirror Studio'
+    cp.subject = cp.keywords = cp.category = cp.comments = ''
     cp.modified = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0, tzinfo=None)
 
     SALIDA.parent.mkdir(parents=True, exist_ok=True)

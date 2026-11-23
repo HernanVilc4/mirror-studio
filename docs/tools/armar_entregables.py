@@ -160,6 +160,11 @@ def source():
             replace(Paragraph(el, cell), line)
         inventory.append({'path': name, 'sha256': hashlib.sha256(raw).hexdigest(), 'lines': len(text.splitlines())})
     clean_images(doc)
+    # Propiedades del archivo: la plantilla traía el título y los autores de otro software.
+    cp = doc.core_properties
+    cp.title = 'Mirror Studio 0.1.0 – Código fuente'
+    cp.author = cp.last_modified_by = 'Mirror Studio'
+    cp.subject = cp.keywords = cp.category = cp.comments = ''
     path = OUT / 'Mirror Studio - codigo fuente.docx'
     doc.save(path)
     # Verifica el código contra los archivos actuales, sin depender del Word abierto.

@@ -1,5 +1,5 @@
 {
-  "commit": "4e9de1b87ed87e9bd226bd0d7f89e2a031173561",
+  "commit": "7b8ab5ea586ebd7f920cf1340fc28efccefff8df",
   "source_files": [
     {
       "path": "packages/protocol/src/index.ts",
@@ -53,7 +53,7 @@
     },
     {
       "path": "apps/desktop/src/renderer/src/App.tsx",
-      "sha256": "d5c333cff4a7c9edba38439b6e0f2e2e477f671e3545649347d42dc84b51da5b",
+      "sha256": "1bc92b15ea2629c99f7a6fda30a18d5c29af2fc1e7a1c639b30fa29933ec1980",
       "lines": 784
     }
   ],
@@ -76,32 +76,9 @@
     "Captura 27 -> se usa la 10",
     "No falta ninguna captura."
   ],
-  "verification": [
-    {
-      "file": "Mirror Studio - manual de uso.docx",
-      "images": 31,
-      "template_styles_and_page_preserved": true,
-      "sha256": "bd4491978b7dab7d1b0c6c615d710d8efbd6693662176f50e4ecc2bf4c676b0f"
-    },
-    {
-      "file": "Mirror Studio - para ejecutar.docx",
-      "images": 2,
-      "template_styles_and_page_preserved": true,
-      "sha256": "11e53eca0b7ad9d69970e5a64d4a145a73c8300b87ef78788ac02fff86980a15"
-    },
-    {
-      "file": "Mirror Studio - codigo fuente.docx",
-      "images": 1,
-      "template_styles_and_page_preserved": true,
-      "sha256": "2908edd79e5ec8565cdddcdc6a5d25dfff3b8e12c4aedb4c9ab2a9d12b8f5ab7"
-    }
-  ],
-  "manual_unique_captures": 27,
-  "manual_pending_captures": [],
-  "visual_word_review": "No realizada: el servicio para localizar el runtime de renderizado no estuvo disponible.",
   "word_sha256": {
-    "Mirror Studio - codigo fuente.docx": "2908edd79e5ec8565cdddcdc6a5d25dfff3b8e12c4aedb4c9ab2a9d12b8f5ab7",
-    "Mirror Studio - manual de uso.docx": "bd4491978b7dab7d1b0c6c615d710d8efbd6693662176f50e4ecc2bf4c676b0f",
-    "Mirror Studio - para ejecutar.docx": "4ba752e7bb8ac297fcf2b61fb077efea3ee449684257d57c1cc45407b1d6d38e"
+    "Mirror Studio - codigo fuente.docx": "380f34444e7381c2053c0fdd1c7f2254aa926ca116032742c3fddcd01075c26e",
+    "Mirror Studio - manual de uso.docx": "5399a5fc4b609677be81555164d088c1dc7913115082598493d74fc705a76c44",
+    "Mirror Studio - para ejecutar.docx": "aaaf0bb5bc000fcb0028275efb72b2caa38d32891ee303cfd52c9f07994f8fcb"
   }
 }

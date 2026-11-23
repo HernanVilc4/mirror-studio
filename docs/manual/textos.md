@@ -11,26 +11,26 @@ Los números entre paréntesis, como (1), son las marcas de esa captura.
 
 ## 1. Introducción
 
-Mirror Studio es una aplicación de escritorio para hacer reuniones en una red local, sin Internet. Permite presentar la pantalla o una ventana con el sonido de la PC, y pedir el control remoto de otra PC con su permiso. Cada persona tiene un rol: creador, administrador, docente o participante. Ideal para aulas y laboratorios donde todas las PCs están en la misma red.
+Mirror Studio (en la ventana del programa el nombre aparece escrito junto: MirrorStudio) es una aplicación de escritorio para hacer reuniones entre computadoras (PCs) conectadas a la misma red local, por ejemplo las de un aula o un laboratorio, sin necesidad de Internet. Una persona crea la reunión en su PC (el anfitrión) y las demás se unen desde las suyas. Dentro de la reunión, cualquiera puede presentar su pantalla o una ventana, con el sonido de la PC, y el creador, un administrador o un docente puede pedir el control del ratón y el teclado de otra PC, que solo se entrega si su dueño lo permite. Cada persona tiene un rol, de mayor a menor: creador (quien abrió la reunión), administrador, docente y participante; el rol decide quién puede pedir el control, cambiar roles o expulsar. Es ideal para aulas y laboratorios.
 
 ## 2. Requisitos del Sistema
 
-- Windows 10 u 11 (Ubuntu también abre la aplicación, pero el control remoto es solo de Windows)
-- Todas las PCs conectadas a la misma red local (misma Wi-Fi, mismo switch o cable)
+- Windows 10 u 11 de 64 bits en cada PC (Ubuntu puede ejecutar el código fuente, pero el control remoto y el sonido de la PC solo funcionan en Windows)
+- Todas las PCs conectadas a la misma red local: de preferencia por cable Ethernet; también la misma Wi-Fi o un mismo hotspot
 - Git instalado en el sistema (https://git-scm.com), solo si se ejecuta el código fuente
-- Node.js 22 LTS o superior (https://nodejs.org), solo si se ejecuta el código fuente
+- Node.js versión 22 o superior, de preferencia la LTS (versión de soporte prolongado) (https://nodejs.org), solo si se ejecuta el código fuente
 - Conexión a Internet solo para instalar; la aplicación funciona sin Internet
 
 ## 3. Instalación
 
-- Descomprime Mirror-Studio-win32-x64.zip y ejecuta Mirror Studio.exe con doble clic. También puedes usar el instalador Mirror Studio Setup 0.1.0.exe.
+- Descarga Mirror-Studio-win32-x64.zip desde https://github.com/HernanVilc4/mirror-studio/releases/tag/v0.1.0, extráelo completo (clic derecho → **Extraer todo**) y haz doble clic en Mirror Studio.exe. También puedes usar el instalador Mirror-Studio-Setup-0.1.0.exe, aunque Windows 11 lo bloquea si tiene activado el Control inteligente de aplicaciones. Los pasos detallados están en el documento «Para ejecutar».
 - Si Windows muestra el aviso de SmartScreen, pulsa **Más información** y luego **Ejecutar de todos modos**.
 - Si deseas usar el código fuente:
   1. Instala Git y Node.js.
-  2. Descarga el proyecto con: git clone https://github.com/HernanVilc4/mirror-studio.git
+  2. Descarga el proyecto con: git clone https://github.com/HernanVilc4/mirror-studio.git y entra a su carpeta con: cd mirror-studio
   3. Instala las dependencias con: npm install y luego npm run build -w @mirror-studio/protocol
   4. Ejecuta la aplicación con: npm run dev
-- En la PC que creará la reunión, permite Mirror Studio en el firewall de Windows una sola vez, como administrador. El comando aparece en **Ayuda de red**, en la pantalla de inicio.
+- Permite Mirror Studio en el firewall de Windows (la protección que bloquea las conexiones que llegan de otras PCs) una sola vez; es imprescindible en la PC que creará la reunión. El comando aparece en **Ayuda de red**, en la pantalla de inicio, y se pega en PowerShell abierto como administrador (clic derecho → **Ejecutar como administrador**).
 
 ## 4. Interfaz Principal
 
@@ -38,10 +38,10 @@ La ventana principal incluye los siguientes elementos:
 
 [captura 01-inicio]
 - Tu nombre, en **Te verán como** (1)
-- Crear reunión (2), para abrir una reunión nueva en esta PC
-- Unirse con IP y código (3), para entrar escribiendo la IP del anfitrión
-- Reuniones en tu red (4), con las reuniones abiertas en la red local
-- El pie de la ventana, con la red y el firewall
+- **Crear reunión** (2), para abrir una reunión nueva en esta PC
+- **Unirse con IP y código** (3), para entrar escribiendo la IP del anfitrión
+- **Reuniones en tu red** (4), con las reuniones abiertas en la red local
+- El pie de la ventana (la franja inferior), con la red y el firewall
 
 En el pie se ven la red que usa la PC (1), el estado del firewall (2) y el botón **Ayuda de red** (3).
 
@@ -55,11 +55,11 @@ Al entrar a una reunión se abre la sala. En la PC anfitriona, arriba están la 
 
 1. Abre Mirror Studio y crea una reunión.
 
-Al abrir la aplicación, la marca MirrorStudio aparece un instante y se coloca en la cabecera; luego queda la pantalla de inicio. En **Te verán como** (1) escribe tu nombre. Desde aquí puedes pulsar **Crear reunión** (2), usar **Unirse con IP y código** (3) o elegir una de las **Reuniones en tu red** (4).
+Al abrir la aplicación, el logotipo de Mirror Studio aparece un momento en el centro y luego sube a la parte superior; después queda la pantalla de inicio. En **Te verán como** (1) escribe tu nombre, que verán los demás. Desde aquí puedes pulsar **Crear reunión** (2), usar **Unirse con IP y código** (3) o elegir una de las **Reuniones en tu red** (4).
 
 [captura 01-inicio]
 
-Antes de crear la reunión, revisa el pie de la ventana: **Red** (1) debe mostrar la IP de la PC y **Firewall** (2) debe decir **permitido**. Si no es así, pulsa **Ayuda de red** (3).
+Antes de crear la reunión, revisa el pie de la ventana: **Red** (1) debe mostrar la IP de la PC (su dirección en la red, por ejemplo 192.168.1.20) y **Firewall** (2) debe decir **permitido**. Si dice **bloqueado** o **sin verificar**, pulsa **Ayuda de red** (3).
 
 [captura 02-inicio-pie]
 
@@ -87,7 +87,7 @@ Si la reunión no aparece, escribe la IP del anfitrión en **Unirse con IP y có
 
 [captura 07-unirse-ip]
 
-Escribe el **Código de la reunión** (1), que tiene 8 caracteres, y pulsa **Entrar** (2).
+En los dos casos se abre una pantalla con **Tu nombre** y **Código de la reunión** (1): escribe el código de 8 caracteres que te dio el anfitrión y pulsa **Entrar** (2).
 
 [captura 08-unirse-codigo]
 
@@ -101,7 +101,7 @@ Al entrar se abre la sala. A la derecha está el panel de participantes (1) y ab
 
 4. Presenta tu pantalla o una ventana.
 
-Cualquier persona de la reunión puede presentar. Pulsa **Presentar** (1) en la barra inferior. Si otra persona ya está presentando, solo alguien con un rol igual o mayor puede reemplazarla.
+Cualquier persona de la reunión puede presentar. Pulsa **Presentar** (1) en la barra inferior. Si otra persona ya está presentando, solo alguien con un rol igual o mayor puede reemplazarla (de mayor a menor: creador, administrador, docente, participante).
 
 [captura 11-presentar-boton]
 
@@ -115,7 +115,7 @@ Los demás ven la presentación (1). Al pasar el ratón por encima aparece el bo
 
 5. Mira tu propia presentación u ocúltala.
 
-Quien presenta ve lo mismo que los demás (1). Si presentas la pantalla donde está abierta Mirror Studio, se forma un espejo infinito: pulsa el botón del ojo (2) para ocultar tu vista.
+Quien presenta ve lo mismo que los demás (1). Si presentas la pantalla donde está abierta Mirror Studio, se forma un espejo infinito (la imagen se repite dentro de sí misma, como dos espejos enfrentados): pulsa el botón del ojo (2) para ocultar tu vista.
 
 [captura 14-presentar-espejo]
 
@@ -129,17 +129,17 @@ Para terminar la presentación pulsa **Detener** (1). Todos vuelven a ver a los 
 
 6. Asigna roles.
 
-El creador pulsa el botón de los tres puntos (1) junto al nombre de una persona. En el menú (2) aparecen las opciones que permite su rol: **Pedir control de su PC**, **Hacer docente**, **Hacer administrador**, **Quitar rol** y **Expulsar**. El administrador solo puede hacer docentes, quitar ese rol y expulsar a docentes y participantes. Todos pueden presentar, pero solo los docentes y administradores pueden pedir control.
+El creador pulsa el botón de los tres puntos (1) junto al nombre de una persona. En el menú (2) aparecen las opciones que permite su rol: **Pedir control de su PC**, **Hacer docente**, **Hacer administrador**, **Quitar rol** y **Expulsar**. El administrador solo puede hacer docentes, quitar ese rol y expulsar a docentes y participantes. Todos pueden presentar, pero solo el creador, los administradores y los docentes pueden pedir control.
 
 [captura 17-roles-menu]
 
 7. Pide el control de otra PC.
 
-Un docente o administrador abre el menú de los tres puntos de la persona y elige **Pedir control de su PC** (1). La PC que se va a controlar debe tener Windows.
+El creador, un administrador o un docente abre el menú de los tres puntos de la persona y elige **Pedir control de su PC** (1). La PC que se va a controlar debe tener Windows.
 
 [captura 18-control-pedir]
 
-En la otra PC aparece la **Solicitud de control**. **Rechazar** (1) no entrega el control y **Permitir** (2) lo entrega. El foco empieza en **Rechazar**, así que pulsar Enter por error no entrega la PC.
+En la otra PC aparece la **Solicitud de control**. **Rechazar** (1) no entrega el control y **Permitir** (2) lo entrega. **Rechazar** viene seleccionado, así que si se pulsa Enter por error, se rechaza y no se entrega la PC.
 
 [captura 19-control-solicitud]
 
@@ -147,7 +147,7 @@ Mientras dura el control, la PC controlada muestra arriba una barra roja (1) que
 
 [captura 20-control-barra]
 
-Quien controla ve la pantalla de la otra PC y la maneja con su ratón y su teclado; para escribir, primero hace clic en la imagen. La barra flotante **Controlando** (1) tiene el botón de pantalla completa (2) y el botón con una X (3) para dejar de controlar.
+Quien controla ve la pantalla de la otra PC y la maneja con su ratón y su teclado; para escribir, primero hace clic en la imagen. La barra flotante **Controlando** (1) tiene el botón ↻ para reintentar si la imagen o los clics dejan de responder, el botón de pantalla completa (2) y el botón con una X (3) para dejar de controlar; abajo, **Soltar control** hace lo mismo.
 
 [captura 21-control-vista]
 
@@ -177,7 +177,7 @@ Arriba a la derecha está el tema. El botón con el nombre de tu sistema (1), po
 
 [captura 28-tema]
 
-Si otras PCs no pueden unirse, en la pantalla de inicio pulsa **Ayuda de red**. La ventana **Red y firewall** muestra el comando para permitir Mirror Studio en el firewall (1); cópialo y ejecútalo una vez en PowerShell abierto como administrador. Luego pulsa **Cerrar** (2).
+Aparte del tema: si otras PCs no pueden unirse, en la pantalla de inicio pulsa **Ayuda de red**. La ventana **Red y firewall** muestra el comando para permitir Mirror Studio en el firewall (1); haz clic sobre él (se selecciona completo), pulsa Ctrl+C y ejecútalo una vez en PowerShell abierto como administrador. Luego pulsa **Cerrar** (2).
 
 [captura 26-ayuda-red]
 
@@ -188,15 +188,15 @@ Y la aplicación entera luce así durante una reunión:
 ## 7. Errores Comunes y Soluciones
 
 - La reunión no aparece en la lista: las PCs pueden estar en redes distintas o la Wi-Fi puede aislar los equipos. Usa **Unirse con IP y código**.
-- Otra PC no puede unirse, o entra pero no ve la pantalla ni oye el sonido: falta permitir Mirror Studio en el firewall de la PC anfitriona o la red está como Pública. Ejecuta el comando de **Ayuda de red** como administrador y pon el perfil de red en Privada.
-- La IP mostrada es 192.168.56.x: es el adaptador de VirtualBox. Actualiza Mirror Studio y, si sigue, desactiva el adaptador virtual.
+- Otra PC no puede unirse, o entra pero no ve la pantalla ni oye el sonido: falta permitir Mirror Studio en el firewall de la PC anfitriona o la red está como Pública. Ejecuta el comando de **Ayuda de red** como administrador y pon la red como privada: Configuración → Red e Internet → Wi-Fi o Ethernet → propiedades de la red → **Tipo de perfil de red** → **Red privada**.
+- La IP mostrada empieza por 192.168.56: es la dirección de VirtualBox, un programa de máquinas virtuales, y no la de la red real. Cierra VirtualBox o desactiva su adaptador: Configuración → Red e Internet → Configuración de red avanzada → elige el adaptador de VirtualBox → **Deshabilitar**.
 - **Código incorrecto** varias veces: después de 5 intentos fallidos hay que esperar un minuto. El código no lleva 0, 1, I ni O.
-- **El puerto 47800 ya está en uso**: hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala, o cierra Mirror Studio desde el Administrador de tareas.
+- **El puerto 47800 ya está en uso**: ya hay otra ventana de Mirror Studio abierta en esa PC. Ciérrala (si no la ves, ciérrala desde el Administrador de tareas, Ctrl+Mayús+Esc) y vuelve a intentarlo.
 
 ## 8. Consejos de Buen Uso
 
 - Usa la misma versión de Mirror Studio en todas las PCs.
 - Prefiere el cable Ethernet: la Wi-Fi de muchas instituciones aísla los equipos o tiene poco ancho de banda.
 - Deja el perfil de red de Windows en Privada.
-- Cierra VPN y máquinas virtuales mientras usas la aplicación.
+- Cierra los programas de VPN (conexiones privadas a otras redes) y las máquinas virtuales mientras usas la aplicación.
 - No presentes la ventana de Mirror Studio, para evitar el espejo infinito.
