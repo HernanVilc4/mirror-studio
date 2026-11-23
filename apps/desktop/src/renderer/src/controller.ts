@@ -147,7 +147,10 @@ export async function present(sourceId: string | null, withAudio = false) {
     attachScreen(s)
     awaitingPresent = true
     send({ t: 'present-start' })
-  } catch { notify('No se pudo capturar la pantalla (permiso denegado o ninguna fuente elegida).') }
+  } catch (e) {
+    console.error('captureScreen', e)
+    notify(`No se pudo capturar la pantalla: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`)
+  }
 }
 export function stopPresent() {
   awaitingPresent = false

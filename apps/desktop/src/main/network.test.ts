@@ -20,6 +20,8 @@ describe('interface choice', () => {
   })
   it('prefers wired over Wi-Fi over virtual adapters', () => {
     expect(pickInterface(listInterfaces(src))?.address).toBe('192.168.10.24')
+    // a VirtualBox host-only adapter named like a real NIC must lose to the real Ethernet
+    expect(pickInterface(listInterfaces({ 'Ethernet 3': nic('192.168.56.1', '0a:00:27:00:00:0c'), Ethernet: nic('172.22.1.43') }))?.address).toBe('172.22.1.43')
     expect(pickInterface(listInterfaces({ 'Wi-Fi': nic('10.0.0.50'), 'vEthernet (WSL)': nic('172.20.0.1') }))?.address).toBe('10.0.0.50')
   })
   it('returns undefined with no network', () => expect(pickInterface([])).toBeUndefined())

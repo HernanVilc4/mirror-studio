@@ -65,13 +65,15 @@ app.whenReady().then(() => {
   else win.loadFile(join(__dirname, '../renderer/index.html'))
 
   // getDisplayMedia() in the renderer: share the source picked in the app, or the primary screen.
-  session.defaultSession.setDisplayMediaRequestHandler(async (_req, cb) => {
-    const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] })
-    const chosen = (pickedSource && sources.find((s) => s.id === pickedSource)) || sources.find((s) => s.id.startsWith('screen:')) || sources[0]
-    cb(chosen ? { video: chosen, ...(wantAudio && SYSTEM_AUDIO ? { audio: 'loopback' as const } : {}) } : {})
+  session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] })
+      const chosen = (pickedSource && sources.find((s) => s.id === pickedSource)) || sources.find((s) => s.id.startsWith('screen:')) || sources[0]
+      cb(chosen ? { video: chosen, ...(wantAudio && SYSTEM_AUDIO && req.audioRequested ? { audio: 'loopback' as const } : {}) } : {})
+    } catch (e) { console.error('[display-media] failed', e); cb({}) }
   })
-  // No microphone and no camera: the only thing the window may capture is the screen it was asked to share.
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'display-capture'))
+  // Nothing but screen capture (and the 'media' gate in front of it) is granted: no other permission.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
 
   ipcMain.handle('net-info', async () => {
     const ifaces = listInterfaces()

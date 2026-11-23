@@ -9,6 +9,9 @@ export type NetworkInterfaces = Record<string, Array<{ family: string | number; 
 
 /** Adapters that exist on a PC but never reach the lab: VMs, containers, VPNs, WSL. */
 const VIRTUAL = /(vethernet|vmware|virtualbox|vbox|hyper-v|docker|veth|br-|virbr|wsl|tailscale|zerotier|vpn|tun|tap|loopback|bluetooth)/i
+/** VM adapters often have a plain name like "Ethernet 3"; their MAC prefix gives them away (VirtualBox, VMware, Hyper-V). */
+const VIRTUAL_MAC = /^(0a:00:27|08:00:27|00:50:56|00:0c:29|00:05:69|00:15:5d)/i
+const isVirtual = (i: Iface) => VIRTUAL.test(i.name) || VIRTUAL_MAC.test(i.mac)
 const WIRELESS = /(wi-?fi|wlan|wireless|wl[a-z0-9]+)/i
 
 /** Every usable private IPv4 address. Link-local (169.254.x.x, "no DHCP") and loopback are excluded. */
@@ -26,7 +29,7 @@ export function listInterfaces(src: NetworkInterfaces = networkInterfaces() as N
  * The labs use Ethernet, and VM/VPN adapters are the usual cause of "it advertises the wrong IP".
  */
 export function pickInterface(list: Iface[]): Iface | undefined {
-  const score = (i: Iface) => (VIRTUAL.test(i.name) ? 0 : WIRELESS.test(i.name) ? 1 : 2)
+  const score = (i: Iface) => (isVirtual(i) ? 0 : WIRELESS.test(i.name) ? 1 : 2)
   return [...list].sort((a, b) => score(b) - score(a))[0]
 }
 
@@ -53,7 +56,7 @@ export interface Found { ip: string; port: number; name: string; host: string; p
  * will not see each other here: that is what "join with address and code" is for.
  */
 export async function scanLan(port = DEFAULT_PORT, src?: NetworkInterfaces): Promise<Found[]> {
-  const ifaces = listInterfaces(src).filter((i) => !VIRTUAL.test(i.name))
+  const ifaces = listInterfaces(src).filter((i) => !isVirtual(i))
   const own = new Set(ifaces.map((i) => i.address))
   const ips = [...new Set(ifaces.flatMap((i) => subnetHosts(i.address, own)))]
   const open = (await Promise.all(ips.map(async (ip) => ((await openPort(ip, port)) ? ip : null)))).filter((x): x is string => x !== null)

@@ -9,10 +9,10 @@ import * as C from './controller'
 
 const ROLE_LABEL: Record<Role, string> = { creator: 'Creador', admin: 'Administrador', teacher: 'Docente', participant: 'Participante' }
 
-const btn = 'rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40'
+const btn = 'rounded-xl px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40'
 const primary = `${btn} bg-accent text-white hover:brightness-110`
 const quiet = `${btn} bg-line text-white hover:bg-line/70`
-const field = 'w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent'
+const field = 'w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/30'
 
 export function App() {
   const hash = new URLSearchParams(location.hash.slice(1))
@@ -48,12 +48,13 @@ function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   return <svg aria-hidden width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{PATHS[name]}</svg>
 }
 /** Round control. The name lives in the tooltip and aria-label, like Meet's call bar. */
-function Round({ label, icon, onClick, tone = 'neutral', pressed }: { label: string; icon: IconName; onClick: () => void; tone?: 'neutral' | 'danger' | 'accent' | 'leave'; pressed?: boolean }) {
+function Round({ label, icon, onClick, tone = 'neutral', pressed, short }: { short?: string; label: string; icon: IconName; onClick: () => void; tone?: 'neutral' | 'danger' | 'accent' | 'leave'; pressed?: boolean }) {
   const tones = { neutral: 'bg-line text-white hover:bg-[#3a3f4a]', danger: 'bg-red-500/90 text-white hover:bg-red-500', accent: 'bg-accent text-white hover:brightness-110', leave: 'bg-red-600 text-white hover:bg-red-500' }
   return (
     <button aria-label={label} title={label} aria-pressed={pressed} onClick={onClick}
-      className={`grid h-12 place-items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${tone === 'leave' ? 'w-16' : 'w-12'} ${tones[tone]}`}>
-      <Icon name={icon} />
+      className="group flex flex-col items-center gap-1 focus-visible:outline-none">
+      <span className={`grid h-12 place-items-center rounded-full shadow-lg transition-all group-hover:scale-105 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent ${tone === 'leave' ? 'w-16' : 'w-12'} ${tones[tone]}`}><Icon name={icon} /></span>
+      <span className="text-[11px] text-muted">{short ?? label}</span>
     </button>
   )
 }
@@ -66,8 +67,8 @@ const Avatar = ({ name, size = 'h-8 w-8 text-sm' }: { name: string; size?: strin
 function Notices() {
   const notices = useUi((s) => s.notices)
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed right-4 top-4 z-50 flex w-80 flex-col gap-2">
-      {notices.map((n) => <div key={n.id} className="anim-pop rounded-xl border border-line bg-surface px-4 py-3 text-sm shadow-xl">{n.text}</div>)}
+    <div role="status" aria-live="polite" className="pointer-events-none fixed bottom-24 left-1/2 z-50 flex w-[28rem] max-w-[90vw] -translate-x-1/2 flex-col gap-2">
+      {notices.map((n) => <div key={n.id} className="anim-pop rounded-xl border border-l-4 border-line border-l-accent bg-surface px-4 py-3 text-sm shadow-xl">{n.text}</div>)}
     </div>
   )
 }
@@ -94,16 +95,16 @@ function Home() {
   const start = (i: Intent) => C.openPrep(i)
   return (
     <>
-      <header className="flex items-center justify-between border-b border-line px-6 py-3">
-        <h1 className="text-lg font-semibold tracking-tight">Mirror Studio</h1>
+      <header className="flex items-center justify-between border-b border-line bg-surface/60 px-6 py-3.5 backdrop-blur">
+        <h1 className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"><span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-white"><Icon name="present" size={18} /></span>Mirror Studio</h1>
         <label className="flex items-center gap-2 whitespace-nowrap text-sm text-muted">Mi nombre
           <input className={`${field} w-44`} value={myName} maxLength={64} onChange={(e) => set({ myName: e.target.value })} />
         </label>
       </header>
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-auto p-6">
         <section className="grid gap-4 sm:grid-cols-2" aria-label="Crear o unirse">
-          <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4" onSubmit={(e) => { e.preventDefault(); start({ kind: 'host', meetingName: name.trim() || `Reunión de ${myName}` }) }}>
-            <h2 className="font-medium">Crear reunión</h2>
+          <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20" onSubmit={(e) => { e.preventDefault(); start({ kind: 'host', meetingName: name.trim() || `Reunión de ${myName}` }) }}>
+            <h2 className="text-base font-semibold">Crear reunión</h2>
             <label className="text-xs text-muted">Nombre de la reunión
               <input className={`${field} mt-1`} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
             </label>
@@ -112,9 +113,9 @@ function Home() {
           <ManualJoin onJoin={(ip, port) => start({ kind: 'join', ip, port, label: ip })} />
         </section>
 
-        <section aria-label="Reuniones detectadas" className="rounded-2xl border border-line bg-surface p-4">
+        <section aria-label="Reuniones detectadas" className="rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-medium">Reuniones detectadas en tu red</h2>
+            <h2 className="text-base font-semibold">Reuniones detectadas en tu red</h2>
             <button className="text-sm text-accent disabled:text-muted" disabled={scanning} onClick={() => void C.scan()}>{scanning ? 'Buscando…' : 'Buscar ahora'}</button>
           </div>
           {found.length === 0 && (
@@ -122,7 +123,7 @@ function Home() {
           )}
           <ul className="flex flex-col gap-2">
             {found.map((f) => (
-              <li key={`${f.ip}:${f.port}`} className="flex items-center justify-between rounded-xl bg-line/50 px-4 py-3">
+              <li key={`${f.ip}:${f.port}`} className="flex items-center justify-between rounded-xl border border-transparent bg-line/50 px-4 py-3 transition-colors hover:border-accent/50">
                 <div className="min-w-0"><div className="truncate font-medium">{f.name}</div><div className="truncate text-xs text-muted">{f.host} · {f.ip} · {f.participants} {f.participants === 1 ? 'persona' : 'personas'}</div></div>
                 <button className={primary} onClick={() => start({ kind: 'join', ip: f.ip, port: f.port, label: f.name })}>Unirse</button>
               </li>
@@ -130,7 +131,7 @@ function Home() {
           </ul>
         </section>
       </main>
-      <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line px-6 py-2 text-xs text-muted">
+      <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-surface/60 px-6 py-2.5 text-xs text-muted">
         <span>{net?.chosen ? <>Red: <b className="text-white">{net.chosen}</b>{net.ifaces.length > 1 && ` (${net.ifaces.length} adaptadores)`}</> : <span className="text-amber-300">Sin red detectada: conecta el cable Ethernet.</span>}</span>
         <span>Firewall: {net?.firewall === 'ok' ? <span className="text-ok">permitido</span> : net?.firewall === 'missing' ? <span className="text-amber-300">falta la regla</span> : 'sin verificar'}</span>
         <button className="text-accent underline" onClick={() => setHelp(true)}>Ayuda de red y firewall</button>
@@ -151,8 +152,8 @@ function ManualJoin({ onJoin }: { onJoin: (ip: string, port: number) => void }) 
     onJoin(m[1], m[2] ? Number(m[2]) : 47800)
   }
   return (
-    <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4" onSubmit={submit}>
-      <h2 className="font-medium">Unirse con IP y código</h2>
+    <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20" onSubmit={submit}>
+      <h2 className="text-base font-semibold">Unirse con IP y código</h2>
       <label className="text-xs text-muted">IP del anfitrión
         <input className={`${field} mt-1`} value={addr} placeholder="192.168.10.24" inputMode="decimal" onChange={(e) => { setAddr(e.target.value); setErr('') }} aria-invalid={!!err} />
       </label>
@@ -213,22 +214,22 @@ function Room() {
   const { state, me, hostInfo, presentation, controlView, sharing, rtt, net } = useUi()
   const self = selfOf(useUi.getState())
   const [picker, setPicker] = useState(false)
-  const [copied, setCopied] = useState(false)
   if (!state || !self) return null
   const controlling = state.controls.find((c) => c.controller === me)
   const controlled = state.controls.find((c) => c.target === me)
   const presenter = state.participants.find((p) => p.id === state.presenter)
   const name = (id: string) => state.participants.find((p) => p.id === id)?.name ?? '?'
   const isPresenter = state.presenter === me
-  const copy = () => { void navigator.clipboard.writeText(`${hostInfo?.ip ?? ''} ${formatCode(hostInfo?.code ?? '')}`).then(() => setCopied(true)) }
   return (
     <>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-2 text-sm">
         <div className="min-w-0"><span className="font-semibold">{state.name}</span><span className="ml-3 text-muted">{state.participants.length} {state.participants.length === 1 ? 'persona' : 'personas'}{rtt !== undefined && ` · ${rtt.toFixed(0)} ms`}</span></div>
         {hostInfo && (
-          <button className="rounded-lg bg-line px-3 py-1.5 text-left hover:bg-line/70" onClick={copy} title="Copiar dirección y código">
-            <span className="text-muted">Para unirse: </span><b>{hostInfo.ip ?? hostInfo.ips[0] ?? '?'}</b> · <b className="font-mono tracking-wider">{formatCode(hostInfo.code)}</b>{copied && <span className="ml-2 text-ok">copiado</span>}
-          </button>
+          <div className="flex items-center gap-2" aria-label="Datos para unirse">
+            <CopyChip label="IP" value={hostInfo.ip ?? hostInfo.ips[0] ?? '?'} />
+            <CopyChip label="Código" value={formatCode(hostInfo.code)} mono />
+            <CopyChip label="Todo" value={`${hostInfo.ip ?? hostInfo.ips[0] ?? ''} ${formatCode(hostInfo.code)}`} compact />
+          </div>
         )}
       </header>
       {controlled && <div role="alert" className="bg-red-900/60 px-5 py-2 text-sm">{name(controlled.controller)} controla este equipo.</div>}
@@ -241,7 +242,7 @@ function Room() {
             : presenter ? <Placeholder text={`Esperando la pantalla de ${presenter.name}…`} />
             : <Grid people={state.participants} />}
         </section>
-        <aside className="w-72 shrink-0 overflow-auto border-l border-line p-3" aria-label="Participantes">
+        <aside className="w-80 shrink-0 overflow-auto border-l border-line bg-surface/40 p-3" aria-label="Participantes">
           <h2 className="mb-2 px-1 text-sm font-medium text-muted">Participantes</h2>
           <ul className="flex flex-col gap-1">{state.participants.map((p) => <Row key={p.id} p={p} self={self} controlled={state.controls.some((c) => c.target === p.id)} presenting={state.presenter === p.id} />)}</ul>
           {state.controls.length > 0 && (
@@ -257,28 +258,41 @@ function Room() {
           )}
         </aside>
       </div>
-      <nav className="flex items-center justify-center gap-3 border-t border-line p-3" aria-label="Controles de la reunión">
+      <nav className="flex items-center justify-center gap-3 border-t border-line bg-surface/60 p-3.5" aria-label="Controles de la reunión">
         {canPresent(self.role) && (isPresenter || sharing
-          ? <Round label="Dejar de presentar" icon="stop" tone="accent" onClick={C.stopPresent} />
-          : <Round label="Presentar pantalla" icon="present" onClick={() => setPicker(true)} />)}
-        {controlling && <Round label="Dejar de controlar" icon="cursor" tone="danger" onClick={() => C.revokeControl(controlling.target)} />}
-        <Round label={self.role === 'creator' ? 'Terminar reunión para todos' : 'Salir de la reunión'} icon="leave" tone="leave" onClick={C.leave} />
+          ? <Round short="Detener" label="Dejar de presentar" icon="stop" tone="accent" onClick={C.stopPresent} />
+          : <Round short="Presentar" label="Presentar pantalla" icon="present" onClick={() => setPicker(true)} />)}
+        {controlling && <Round short="Soltar control" label="Dejar de controlar" icon="cursor" tone="danger" onClick={() => C.revokeControl(controlling.target)} />}
+        <Round short={self.role === 'creator' ? 'Terminar' : 'Salir'} label={self.role === 'creator' ? 'Terminar reunión para todos' : 'Salir de la reunión'} icon="leave" tone="leave" onClick={C.leave} />
       </nav>
       {picker && <SourcePicker onClose={() => setPicker(false)} />}
     </>
   )
 }
 
+/** One value with its own copy button: the IP and the code are usually typed on another PC, one at a time. */
+function CopyChip({ label, value, mono, compact }: { label: string; value: string; mono?: boolean; compact?: boolean }) {
+  const [done, setDone] = useState(false)
+  const copy = () => { void navigator.clipboard.writeText(value).then(() => { setDone(true); setTimeout(() => setDone(false), 1500) }) }
+  return (
+    <button onClick={copy} title={`Copiar ${label.toLowerCase()}: ${value}`} aria-label={`Copiar ${label.toLowerCase()} ${value}`}
+      className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${done ? 'border-ok/60 bg-ok/10 text-ok' : 'border-line bg-line/60 hover:border-accent/60'}`}>
+      {!compact && <><span className="text-muted">{label}</span><b className={mono ? 'font-mono tracking-wider' : ''}>{value}</b></>}
+      <span className="text-xs text-accent">{done ? '¡Copiado!' : compact ? 'Copiar todo' : 'Copiar'}</span>
+    </button>
+  )
+}
 function Placeholder({ text }: { text: string }) {
   return <div className="grid flex-1 place-items-center rounded-2xl border border-dashed border-line text-sm text-muted">{text}</div>
 }
 function Grid({ people }: { people: Participant[] }) {
   return (
-    <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(220px,1fr))] content-start gap-3 overflow-auto">
+    <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-4 overflow-auto">
+      {people.length === 1 && <p className="col-span-full rounded-xl border border-dashed border-line px-4 py-3 text-center text-sm text-muted">Eres la única persona por ahora. Comparte la IP y el código de arriba para que otros se unan, o pulsa «Presentar».</p>}
       {people.map((p) => (
-        <div key={p.id} className="relative grid aspect-video place-items-center rounded-xl bg-surface">
-          <Avatar name={p.name} size="h-16 w-16 text-2xl" />
-          <span className="absolute bottom-2 left-3 max-w-[80%] truncate text-sm">{p.name}</span>
+        <div key={p.id} className="relative grid aspect-video place-items-center rounded-xl border border-line bg-surface shadow-md shadow-black/20">
+          <Avatar name={p.name} size="h-20 w-20 text-3xl" />
+          <span className="absolute bottom-2 left-3 max-w-[80%] truncate rounded-md bg-black/40 px-2 py-0.5 text-sm">{p.name}</span>
         </div>
       ))}
     </div>
@@ -289,7 +303,7 @@ function Stage({ stream, caption }: { stream: MediaStream; caption: string }) {
   useEffect(() => { if (v.current) v.current.srcObject = stream }, [stream])
   return (
     <figure className="flex min-h-0 flex-1 flex-col gap-2">
-      <video ref={v} autoPlay muted playsInline className="min-h-0 w-full flex-1 rounded-xl bg-black object-contain" />
+      <video ref={v} autoPlay muted playsInline className="min-h-0 w-full flex-1 rounded-xl bg-black object-contain shadow-2xl ring-1 ring-line" />
       <figcaption className="text-xs text-muted">{caption}</figcaption>
     </figure>
   )
