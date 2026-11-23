@@ -6,12 +6,13 @@ import {
 import type { CaptureSource } from '../../preload'
 import { useUi, selfOf, notify, type Intent } from './store'
 import * as C from './controller'
+import { Isotipo, Wordmark, cssColorToHex } from './brand/brand'
 
 const ROLE_LABEL: Record<Role, string> = { creator: 'Creador', admin: 'Administrador', teacher: 'Docente', participant: 'Participante' }
 
 const btn = 'rounded-xl px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40'
-const primary = `${btn} bg-accent text-white hover:brightness-110`
-const quiet = `${btn} bg-line text-white hover:bg-line/70`
+const primary = `${btn} bg-primary text-on-primary hover:opacity-90`
+const quiet = `${btn} bg-hover text-fg hover:bg-line`
 const field = 'w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/30'
 
 export function App() {
@@ -20,11 +21,32 @@ export function App() {
   return <Main />
 }
 
+/** The brand entrance plays once per cold start: not when leaving a meeting, restoring the window or re-rendering. */
+let introPlayed = false
+
 function Main() {
   const phase = useUi((s) => s.phase)
+  const host = useRef<HTMLDivElement>(null)
+  const view = useRef<HTMLDivElement>(null)
   useEffect(() => { C.init(); return C.dispose }, [])
+  useEffect(() => {
+    if (introPlayed || !host.current || !view.current) return
+    introPlayed = true
+    const ac = new AbortController()
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches
+    // Destination: the mark in the home header. Its real color ends the morph, so only one mark is ever seen.
+    const anchor = view.current.querySelector<HTMLElement>('[data-brand-anchor]')
+    const destinationInk = (anchor && cssColorToHex(getComputedStyle(anchor).color)) || (dark ? '#FFFFFF' : '#0B1020')
+    MirrorStudioIntro.play({
+      host: host.current, main: view.current, anchor, ready: C.ready, signal: ac.signal,
+      focusTarget: view.current.querySelector<HTMLElement>('[data-focus-start]'),
+      background: dark ? '#0B1020' : '#FFFFFF', ink: dark ? '#FFFFFF' : '#0B1020', destinationInk
+    }).catch(() => { /* AbortError on close; a boot failure is already shown by the home screen with its retry */ })
+    return () => { ac.abort(); introPlayed = false }
+  }, [])
   return (
-    <div className="flex h-full flex-col">
+    <div ref={host} className="relative h-full">
+    <div ref={view} className="flex h-full flex-col">
       <TitleBar />
       <Notices />
       {phase === 'home' && <Home />}
@@ -32,12 +54,13 @@ function Main() {
       {phase === 'room' && <Room />}
       <AskDialog />
     </div>
+    </div>
   )
 }
 
 // ---- Icons and round controls (Meet-style: icon only, name in tooltip and aria-label) ------------------
 
-type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop' | 'plus' | 'arrow' | 'refresh' | 'copy' | 'check' | 'help' | 'x' | 'users' | 'expand' | 'shrink' | 'eye' | 'eye-off' | 'link' | 'network' | 'shield' | 'login'
+type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop' | 'plus' | 'arrow' | 'refresh' | 'copy' | 'check' | 'help' | 'x' | 'users' | 'expand' | 'shrink' | 'eye' | 'eye-off' | 'link' | 'network' | 'shield' | 'login' | 'monitor' | 'sun' | 'moon'
 const PATHS: Record<IconName, React.ReactNode> = {
   'present': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4M12 13V8M9.5 10.5L12 8l2.5 2.5" /></>,
   'stop': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /><rect x="9" y="7" width="6" height="6" rx="1" /></>,
@@ -50,6 +73,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   'check': <path d="M5 12.5l4.5 4.5L19 7.5" />,
   'help': <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.2 1-1.2 1.8M12 17h.01" /></>,
   'x': <path d="M6 6l12 12M18 6L6 18" />,
+  'monitor': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>,
+  'sun': <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+  'moon': <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
   'network': <><rect x="9" y="3" width="6" height="5" rx="1" /><rect x="3" y="16" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M12 8v4M6 16v-2h12v2" /></>,
   'shield': <><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" /><path d="M9 12l2 2 4-4" /></>,
   'login': <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4" />,
@@ -66,7 +92,7 @@ function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
 }
 /** Round control. The name lives in the tooltip and aria-label, like Meet's call bar. */
 function Round({ label, icon, onClick, tone = 'neutral', pressed, short }: { short?: string; label: string; icon: IconName; onClick: () => void; tone?: 'neutral' | 'danger' | 'accent' | 'leave'; pressed?: boolean }) {
-  const tones = { neutral: 'bg-line text-white hover:bg-[#3a3f4a]', danger: 'bg-red-500/90 text-white hover:bg-red-500', accent: 'bg-accent text-white hover:brightness-110', leave: 'bg-red-600 text-white hover:bg-red-500' }
+  const tones = { neutral: 'bg-hover text-fg hover:bg-line', danger: 'bg-red-500/90 text-white hover:bg-red-500', accent: 'bg-primary text-on-primary hover:opacity-90', leave: 'bg-red-600 text-white hover:bg-red-500' }
   return (
     <button aria-label={label} title={label} aria-pressed={pressed} onClick={onClick}
       className="group flex flex-col items-center gap-1 focus-visible:outline-none">
@@ -92,36 +118,85 @@ function Btn({ icon, motion, spinning, className, children, ...rest }: { icon: I
 
 // ---- Shared ----------------------------------------------------------------------------------------
 
-/** The app mark: a screen being mirrored. `animate` draws it in (home screen entrance). */
-function Logo({ size = 24, animate }: { size?: number; animate?: boolean }) {
-  return (
-    <span aria-hidden className={`${animate ? 'logo-in' : ''} grid shrink-0 place-items-center rounded-[28%] bg-gradient-to-br from-accent to-[#7c5cff] text-white shadow-lg shadow-accent/30`} style={{ width: size, height: size }}>
-      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect className="draw" pathLength={1} x="3" y="4" width="18" height="12" rx="2" />
-        <path className="draw d2" pathLength={1} d="M8 20h8M12 16v4" />
-        <path className="draw d3" pathLength={1} d="M9 10.5L12 7.5l3 3M12 7.5v5.5" />
-      </svg>
-    </span>
-  )
-}
-
 /** Replaces the OS title bar: the OS keeps only its minimize/maximize/close buttons on the right (titleBarOverlay). */
 function TitleBar() {
   const { phase, state } = useUi()
   return (
-    <div className="drag flex h-10 shrink-0 items-center gap-2 border-b border-line/60 bg-[#0d0f13] pl-3 pr-[150px] text-xs">
-      <Logo size={20} />
-      <span className="font-semibold tracking-tight">Mirror Studio</span>
+    <div className="drag flex h-10 shrink-0 items-center gap-2.5 border-b border-line bg-bar pl-3 pr-[150px] text-xs text-fg">
+      <Isotipo size={22} />
+      <Wordmark height={11} />
       {phase === 'room' && state && <span className="truncate text-muted">· {state.name}</span>}
+      <span className="flex-1" />
+      <ThemeSwitch />
     </div>
   )
 }
 
-/** Small round button over video: icon only, the name is in the tooltip and for screen readers. */
-function IconBtn({ icon, label, onClick, tone = 'glass', motion = 'pop' }: { icon: IconName; label: string; onClick: () => void; tone?: 'glass' | 'danger'; motion?: Motion }) {
+/**
+ * Changing theme sweeps the window on the brand's diagonal (View Transitions), starting at the control that was
+ * pressed. Everything up-right of that line is new from the first frame, which matches the OS window buttons in
+ * the corner (the system recolors those at once). We wait for the page's prefers-color-scheme to follow Electron.
+ */
+function switchTheme(source: 'system' | 'light' | 'dark', from?: HTMLElement) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduce || !('startViewTransition' in document)) return void C.setTheme(source)
+  const mq = matchMedia('(prefers-color-scheme: dark)')
+  const t = document.startViewTransition(async () => {
+    await C.setTheme(source)
+    const th = useUi.getState().theme
+    if (th && th.dark !== mq.matches) {
+      await new Promise<void>((done) => { const f = () => { mq.removeEventListener('change', f); done() }; mq.addEventListener('change', f); setTimeout(f, 400) })
+    }
+  })
+  const r = from?.getBoundingClientRect()
+  const W = innerWidth, H = innerHeight, M = W + H
+  const cx = r ? r.left + r.width / 2 : W, cy = r ? r.top + r.height / 2 : 0
+  // Revealed area: x - y >= k. k starts on the pressed control and ends past the bottom-left corner.
+  const band = (k: number) => `polygon(${k - M}px ${-M}px, ${W + 2 * M}px ${-M}px, ${W + 2 * M}px ${H + M}px, ${k + H + M}px ${H + M}px)`
+  void t.ready.then(() => document.documentElement.animate(
+    { clipPath: [band(cx - cy), band(-H - 40)] },
+    { duration: 650, easing: 'cubic-bezier(.65,0,.35,1)', pseudoElement: '::view-transition-new(root)' }
+  ))
+}
+
+/**
+ * Light/dark switch split on a diagonal (the two inks of the brand), plus "follow the system", which names the
+ * OS it follows (Windows 11, Ubuntu…) and is highlighted while active.
+ */
+function ThemeSwitch() {
+  const theme = useUi((s) => s.theme)
+  if (!theme) return null
+  const { dark, os } = theme
+  const system = theme.source === 'system'
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={(e) => switchTheme('system', e.currentTarget)} aria-pressed={system}
+        title={system ? `Sigue el tema de ${os} (ahora ${dark ? 'oscuro' : 'claro'})` : `Seguir el tema de ${os}`}
+        className={`group flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${system ? 'border-accent/60 bg-accent/10 text-fg' : 'border-line text-muted hover:border-accent/40 hover:text-fg'}`}>
+        <span aria-hidden className="ico ico-pop"><Icon name="monitor" size={13} /></span>{os}
+        {system && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />}
+      </button>
+      <button role="switch" aria-checked={dark} data-dark={dark} onClick={(e) => switchTheme(dark ? 'light' : 'dark', e.currentTarget)}
+        aria-label="Tema oscuro" title={dark ? 'Tema oscuro · pulsa para claro' : 'Tema claro · pulsa para oscuro'}
+        className="theme-switch focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        <span aria-hidden className="theme-switch__ink" />
+        {/* The other option is always visible on its own half: the moon on midnight, the sun on white. */}
+        <span aria-hidden className="theme-switch__hint theme-switch__hint--moon"><Icon name="moon" size={11} /></span>
+        <span aria-hidden className="theme-switch__hint theme-switch__hint--sun"><Icon name="sun" size={11} /></span>
+        <span aria-hidden className="theme-switch__thumb">
+          <span className="theme-switch__sun"><Icon name="sun" size={13} /></span>
+          <span className="theme-switch__moon"><Icon name="moon" size={13} /></span>
+        </span>
+      </button>
+    </div>
+  )
+}
+
+/** `glass` sits on video (always dark); `plain` sits on the app's own surfaces and follows the theme. */
+function IconBtn({ icon, label, onClick, tone = 'glass', motion = 'pop' }: { icon: IconName; label: string; onClick: () => void; tone?: 'glass' | 'danger' | 'plain'; motion?: Motion }) {
   return (
     <button aria-label={label} title={label} onClick={onClick}
-      className={`group grid h-9 w-9 place-items-center rounded-full backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-accent ${tone === 'danger' ? 'bg-red-600/90 text-white hover:bg-red-500' : 'bg-black/55 text-white hover:bg-black/80'}`}>
+      className={`group grid h-9 w-9 place-items-center rounded-full backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-accent ${tone === 'danger' ? 'bg-red-600/90 text-white hover:bg-red-500' : tone === 'plain' ? 'bg-hover text-fg hover:bg-line' : 'bg-black/55 text-white hover:bg-black/80'}`}>
       <span aria-hidden className={`ico ico-${motion}`}><Icon name={icon} size={18} /></span>
     </button>
   )
@@ -168,7 +243,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 // ---- Home ------------------------------------------------------------------------------------------
 
 function Home() {
-  const { net, found, scanning, myName, set } = useUi()
+  const { net, found, scanning, myName, set, bootError } = useUi()
   const [name, setName] = useState('')
   const [help, setHelp] = useState(false)
   const start = (i: Intent) => C.openPrep(i)
@@ -177,8 +252,12 @@ function Home() {
     <div className="home-bg relative flex min-h-0 flex-1 flex-col">
       <main className="flex flex-1 flex-col items-center overflow-auto px-6 pb-8">
         <header className="flex flex-col items-center gap-3 pb-6 pt-10 text-center">
-          <div className="relative grid place-items-center"><span aria-hidden className="hero-glow" /><Logo size={80} animate /></div>
-          <h1 className="anim-rise title-gradient mt-2 text-4xl font-bold tracking-tight" style={{ animationDelay: '.3s' }}>Mirror Studio</h1>
+          <div className="relative grid place-items-center">
+            <span aria-hidden className="hero-glow" />
+            {/* Box in the symbol's 372×271 proportion: the brand entrance lands exactly on it. */}
+            <span data-brand-anchor className="relative block text-fg" style={{ width: 112, height: (112 * 271) / 372 }}><Isotipo size={112} micro={false} /></span>
+          </div>
+          <h1 className="mt-3 text-fg"><Wordmark height={30} /></h1>
           <p className="anim-rise text-sm text-muted" style={{ animationDelay: '.4s' }}>Presenta tu pantalla y controla PCs de tu red local, sin Internet.</p>
           <label className="anim-rise group mt-2 flex items-center gap-2 rounded-full border border-line bg-surface/80 py-1 pl-1 pr-4 shadow-lg shadow-black/20 transition-colors focus-within:border-accent" style={{ animationDelay: '.5s' }}>
             <Avatar name={myName || '?'} size="h-8 w-8 text-sm" />
@@ -188,11 +267,18 @@ function Home() {
         </header>
 
         <div className="flex w-full max-w-3xl flex-col gap-5">
+          {bootError && (
+            <div role="alert" className="card flex items-center gap-3 border-warn/50 p-4 text-sm">
+              <span className="text-warn"><Icon name="shield" size={20} /></span>
+              <p className="flex-1">No se pudo preparar el espacio de trabajo: {bootError}</p>
+              <Btn icon="refresh" motion="spin" className={quiet} onClick={C.retryBoot}>Reintentar</Btn>
+            </div>
+          )}
           <section className="grid gap-5 sm:grid-cols-2" aria-label="Crear o unirse">
             <form className="card anim-rise flex flex-col gap-3 p-5" style={{ animationDelay: '.55s' }}
               onSubmit={(e) => { e.preventDefault(); start({ kind: 'host', meetingName: name.trim() || `Reunión de ${myName}` }) }}>
               <CardHead icon="plus" title="Crear reunión" hint="Serás el anfitrión: otros se unen con tu IP y código." />
-              <input aria-label="Nombre de la reunión" className={field} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
+              <input data-focus-start aria-label="Nombre de la reunión" className={field} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
               <Btn icon="plus" motion="turn" className={`${primary} mt-auto`} type="submit">Crear reunión</Btn>
             </form>
             <ManualJoin onJoin={(ip, port) => start({ kind: 'join', ip, port, label: ip })} />
@@ -210,12 +296,12 @@ function Home() {
                   <p className="text-xs text-muted">{scanning ? 'Buscando…' : found.length ? `${found.length} ${found.length === 1 ? 'reunión encontrada' : 'reuniones encontradas'}` : 'Se busca sola cada pocos segundos'}</p>
                 </div>
               </div>
-              <IconBtn icon="refresh" motion="spin" label="Buscar ahora" onClick={() => void C.scan()} />
+              <IconBtn icon="refresh" motion="spin" tone="plain" label="Buscar ahora" onClick={() => void C.scan()} />
             </div>
             {found.length === 0 ? (
               <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-line px-4 py-6 text-center">
                 <p className="text-sm text-muted">{scanning ? 'Buscando reuniones…' : 'Aún no hay reuniones abiertas en esta red.'}</p>
-                {!scanning && <p className="max-w-md text-xs text-muted/80">Si las PCs están en redes separadas (VLAN), únete con la IP y el código.</p>}
+                {!scanning && <p className="max-w-md text-xs text-muted">Si las PCs están en redes separadas (VLAN), únete con la IP y el código.</p>}
               </div>
             ) : (
               <ul className="flex flex-col gap-2">
@@ -238,9 +324,9 @@ function Home() {
         </div>
       </main>
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-[#0d0f13]/90 px-5 py-2 text-xs backdrop-blur">
+      <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-bar/90 px-5 py-2 text-xs backdrop-blur">
         <StatusPill tone={net?.chosen ? 'ok' : 'warn'} icon="network">
-          {net?.chosen ? <>Red <b className="font-mono text-white">{net.chosen}</b>{net.ifaces.length > 1 && <span className="text-muted"> · {net.ifaces.length} adaptadores</span>}</> : 'Sin red: conecta el cable Ethernet'}
+          {net?.chosen ? <>Red <b className="font-mono text-fg">{net.chosen}</b>{net.ifaces.length > 1 && <span className="text-muted"> · {net.ifaces.length} adaptadores</span>}</> : 'Sin red: conecta el cable Ethernet'}
         </StatusPill>
         <StatusPill tone={fw === 'ok' ? 'ok' : fw === 'missing' ? 'warn' : 'idle'} icon="shield" onClick={fw === 'ok' ? undefined : () => setHelp(true)}>
           Firewall {fw === 'ok' ? 'permitido' : fw === 'missing' ? 'bloqueado: ver cómo abrirlo' : 'sin verificar'}
@@ -257,7 +343,7 @@ function Home() {
 function CardHead({ icon, title, hint }: { icon: IconName; title: string; hint: string }) {
   return (
     <div className="flex items-start gap-3">
-      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent/30 to-[#7c5cff]/30 text-white ring-1 ring-white/10"><Icon name={icon} size={20} /></span>
+      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent ring-1 ring-accent/25"><Icon name={icon} size={20} /></span>
       <div><h2 className="text-base font-semibold">{title}</h2><p className="text-xs text-muted">{hint}</p></div>
     </div>
   )
@@ -265,11 +351,11 @@ function CardHead({ icon, title, hint }: { icon: IconName; title: string; hint: 
 
 /** One status in the footer: a colored dot says ok / needs attention at a glance. */
 function StatusPill({ tone, icon, onClick, children }: { tone: 'ok' | 'warn' | 'idle'; icon: IconName; onClick?: () => void; children: React.ReactNode }) {
-  const dot = tone === 'ok' ? 'bg-ok' : tone === 'warn' ? 'bg-amber-400 animate-pulse' : 'bg-muted'
-  const cls = `flex items-center gap-2 rounded-full border px-3 py-1.5 ${tone === 'warn' ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-line bg-surface/70 text-muted'}`
+  const dot = tone === 'ok' ? 'bg-ok' : tone === 'warn' ? 'bg-warn animate-pulse' : 'bg-muted'
+  const cls = `flex items-center gap-2 rounded-full border px-3 py-1.5 ${tone === 'warn' ? 'border-warn/40 bg-warn/10 text-warn' : 'border-line bg-surface/70 text-muted'}`
   const body = <><span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} /><Icon name={icon} size={14} /><span>{children}</span></>
   return onClick
-    ? <button className={`${cls} transition-colors hover:border-amber-400/70 focus-visible:outline-2 focus-visible:outline-accent`} onClick={onClick}>{body}</button>
+    ? <button className={`${cls} transition-colors hover:border-warn/70 focus-visible:outline-2 focus-visible:outline-accent`} onClick={onClick}>{body}</button>
     : <span className={cls}>{body}</span>
 }
 
@@ -286,7 +372,7 @@ function ManualJoin({ onJoin }: { onJoin: (ip: string, port: number) => void }) 
     <form className="card anim-rise flex flex-col gap-3 p-5" style={{ animationDelay: '.6s' }} onSubmit={submit}>
       <CardHead icon="login" title="Unirse con IP y código" hint="Pide al anfitrión su IP; el código va en el paso siguiente." />
       <input aria-label="IP del anfitrión" className={`${field} font-mono`} value={addr} placeholder="192.168.10.24" inputMode="decimal" onChange={(e) => { setAddr(e.target.value); setErr('') }} aria-invalid={!!err} />
-      {err && <p role="alert" className="text-xs text-amber-300">{err}</p>}
+      {err && <p role="alert" className="text-xs text-warn">{err}</p>}
       <Btn icon="arrow" motion="slide" className={`${quiet} mt-auto`} type="submit">Continuar</Btn>
     </form>
   )
@@ -297,10 +383,10 @@ function NetworkHelp({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Red y firewall" onClose={onClose}>
       <div className="flex flex-col gap-3 text-sm text-muted">
-        <p>Mirror Studio funciona solo por <b className="text-white">cable Ethernet</b> dentro de la misma red. El puerto es <b className="text-white">{net.port}</b> (TCP).</p>
+        <p>MirrorStudio funciona solo por <b className="text-fg">cable Ethernet</b> dentro de la misma red. El puerto es <b className="text-fg">{net.port}</b> (TCP).</p>
         <p>Direcciones de este equipo: {net.ifaces.length ? net.ifaces.map((i) => <code key={i.address} className="mr-2 rounded bg-bg px-1">{i.name}: {i.address}</code>) : 'ninguna'}</p>
         <p>Si otros equipos no pueden unirse, permite el programa en el firewall de Windows (como administrador, una sola vez):</p>
-        <code className="select-all break-all rounded bg-bg p-2 text-xs text-white">{net.firewallCommand}</code>
+        <code className="select-all break-all rounded bg-bg p-2 text-xs text-fg">{net.firewallCommand}</code>
         <p>Si las PCs están en redes distintas (VLAN), la detección automática no las verá: usa «Unirse con IP y código».</p>
       </div>
       <div className="mt-4 flex justify-end"><button data-autofocus className={primary} onClick={onClose}>Cerrar</button></div>
@@ -327,7 +413,7 @@ function Prep() {
             <span id="code-help" className="mt-1 block text-xs text-muted">Te lo da quien creó la reunión. Son 8 caracteres.</span>
           </label>
         )}
-        {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
+        {error && <p role="alert" className="text-sm text-warn">{error}</p>}
         <div className="flex justify-end gap-2">
           <Btn icon="x" motion="pop" type="button" className={quiet} onClick={C.cancelPrep}>Cancelar</Btn>
           <Btn icon="arrow" motion="slide" type="submit" className={primary} disabled={!ok || busy}>{busy ? 'Entrando…' : intent.kind === 'host' ? 'Crear y entrar' : 'Entrar'}</Btn>
@@ -365,11 +451,11 @@ function Room() {
           <button aria-label={side ? 'Ocultar participantes' : 'Mostrar participantes'} title={side ? 'Ocultar participantes' : 'Mostrar participantes'} aria-expanded={side} onClick={() => setSide(!side)}
             className={`group relative grid h-9 w-9 place-items-center rounded-xl border transition-colors focus-visible:outline-2 focus-visible:outline-accent ${side ? 'border-accent/50 bg-accent/15 text-accent' : 'border-line bg-line/60 hover:border-accent/50'}`}>
             <span aria-hidden className="ico ico-pop"><Icon name="users" size={18} /></span>
-            <span aria-hidden className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{state.participants.length}</span>
+            <span aria-hidden className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-on-primary">{state.participants.length}</span>
           </button>
         </div>
       </header>
-      {controlled && <div role="alert" className="bg-red-900/60 px-5 py-2 text-sm">{name(controlled.controller)} controla este equipo.</div>}
+      {controlled && <div role="alert" className="bg-red-600 px-5 py-2 text-sm text-white">{name(controlled.controller)} controla este equipo.</div>}
       <div className="flex min-h-0 flex-1">
         <section className="flex min-w-0 flex-1 flex-col p-4" aria-label="Presentación">
           {controlling && controlView ? <ControlView target={controlling.target} stream={controlView} name={name(controlling.target)} />
@@ -388,7 +474,7 @@ function Room() {
               {state.controls.map((c) => (
                 <div key={c.controller + c.target} className="flex items-center justify-between gap-2 py-0.5">
                   <span className="flex min-w-0 items-center gap-1.5 truncate"><b className="truncate font-medium">{name(c.controller)}</b><span aria-label="controla a" className="ico-flow text-accent"><Icon name="arrow" size={14} /></span><b className="truncate font-medium">{name(c.target)}</b></span>
-                  {(c.controller === me || c.target === me) && <Btn icon="x" motion="pop" className="rounded-lg px-2 py-1 text-red-300 hover:bg-red-500/15" onClick={() => C.revokeControl(c.controller === me ? c.target : c.controller)}>Detener</Btn>}
+                  {(c.controller === me || c.target === me) && <Btn icon="x" motion="pop" className="rounded-lg px-2 py-1 text-danger hover:bg-red-500/15" onClick={() => C.revokeControl(c.controller === me ? c.target : c.controller)}>Detener</Btn>}
                 </div>
               ))}
             </div>
@@ -458,7 +544,7 @@ function Grid({ people }: { people: Participant[] }) {
       {people.map((p) => (
         <div key={p.id} className="relative grid aspect-video place-items-center rounded-xl border border-line bg-surface shadow-md shadow-black/20">
           <Avatar name={p.name} size="h-20 w-20 text-3xl" />
-          <span className="absolute bottom-2 left-3 max-w-[80%] truncate rounded-md bg-black/40 px-2 py-0.5 text-sm">{p.name}</span>
+          <span className="absolute bottom-2 left-3 max-w-[80%] truncate rounded-md bg-bg/80 px-2 py-0.5 text-sm text-fg">{p.name}</span>
         </div>
       ))}
     </div>
@@ -504,7 +590,7 @@ function Row({ p, self, controlled, presenting }: { p: Participant; self: Partic
           )}
         </div>
         {actions.length > 0 && (
-          <button className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-line hover:text-white focus-visible:outline-2 focus-visible:outline-accent" aria-label={`Más acciones para ${p.name}`} title="Más acciones" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <button className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-accent" aria-label={`Más acciones para ${p.name}`} title="Más acciones" aria-expanded={open} onClick={() => setOpen(!open)}>
             <Icon name="more" size={18} />
           </button>
         )}
@@ -535,7 +621,7 @@ function SourcePicker({ onClose }: { onClose: () => void }) {
     <Modal title="¿Qué quieres presentar?" onClose={onClose}>
       <button data-autofocus className={`${primary} mb-3 w-full`} onClick={() => go(null)}>Pantalla principal</button>
       {!sources && !failed && <p className="text-sm text-muted">Buscando otras pantallas y ventanas…</p>}
-      {failed && !sources && <p role="alert" className="text-sm text-amber-300">No se pudo listar las ventanas. Puedes presentar la pantalla principal.</p>}
+      {failed && !sources && <p role="alert" className="text-sm text-warn">No se pudo listar las ventanas. Puedes presentar la pantalla principal.</p>}
       {sources && (
         <ul className="grid max-h-64 grid-cols-2 gap-2 overflow-auto">
           {sources.map((s) => (
@@ -621,7 +707,7 @@ function AskDialog() {
     <Modal title="Solicitud de control">
       <p className="mb-2 text-sm"><b>{a.name}</b> quiere controlar tu PC.</p>
       <p className="mb-4 text-sm text-muted">Podrá mover el ratón y usar el teclado, y verá tu pantalla completa. Verás una barra roja arriba mientras dure. Puedes detenerlo cuando quieras con <b>Ctrl+Alt+Esc</b>.</p>
-      {!can && <p role="alert" className="mb-3 text-sm text-amber-300">Este equipo no admite control remoto (solo Windows). Se rechazará.</p>}
+      {!can && <p role="alert" className="mb-3 text-sm text-warn">Este equipo no admite control remoto (solo Windows). Se rechazará.</p>}
       <div className="flex justify-end gap-2">
         {/* Focus starts on "Rechazar": pressing Enter by accident must never hand over the PC. */}
         <button data-autofocus className={quiet} onClick={() => C.respondControl(a.controller, false)}>Rechazar</button>

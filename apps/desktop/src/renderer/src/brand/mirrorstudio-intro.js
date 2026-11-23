@@ -1,0 +1,133 @@
+/* MirrorStudio · Doble Erre. Script local, sin dependencias. */
+(function(root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.MirrorStudioIntro = api;
+})(typeof globalThis === 'object' ? globalThis : this, function() {
+  'use strict';
+  const forms = {"r1": "M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z", "r2": "M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z", "word": "M143 50.38C136.24 49.12 130.78 45.04 128.68 39.7C127.26 36.09 127.47 30.32 129.14 27C131.55 22.2 135.21 19.3 141 17.61C144.2 16.68 151.1 16.69 154.16 17.64C160.06 19.46 163.53 22.31 166.04 27.37C166.84 28.98 167.08 29.97 167.23 32.28C167.63 38.65 165.84 42.54 160.53 46.81C156.32 50.2 149.46 51.59 143 50.38Z M151.83 41.49C154.61 39.74 156 37.14 156 33.72C156 28.52 152.5 25 147.33 25C143.84 25 141.24 26.59 139.65 29.69C138.38 32.19 138.94 37.12 140.75 39.35C141.45 40.21 143.57 41.7 144.56 42.01C146.18 42.53 150.7 42.21 151.83 41.49Z M207 50.34C203.81 49.73 201.28 49.01 200.12 48.39C199.78 48.2 199.28 47.96 199 47.84C198.32 47.57 197.36 46.98 196.08 46.06C195.03 45.31 194.67 44.24 195.33 43.84C195.51 43.72 196.26 42.63 197 41.4C197.74 40.17 198.63 38.8 198.98 38.34L199.62 37.52 201.06 38.54C204.37 40.88 207.56 41.97 211.83 42.22C215.71 42.45 217.34 42.1 219 40.71C220.03 39.85 220.17 39.56 220.17 38.17C220.17 36.75 220.04 36.48 218.86 35.46C218.14 34.84 217.09 34.2 216.53 34.03C215.96 33.86 215.05 33.57 214.5 33.38C213.95 33.19 212.53 32.78 211.33 32.47C203.3 30.35 199.77 28.16 197.85 24.11C197.15 22.63 197 21.82 197 19.48C197 16.98 197.12 16.4 198.07 14.46C199.93 10.63 203.67 8.02 209.04 6.8C212.05 6.12 217.04 6.03 220.17 6.62C222.99 7.14 228.2 9.11 229.48 10.12L230.41 10.87 229.52 12.52C229.02 13.42 228.33 14.62 227.98 15.17C227.63 15.72 227.17 16.5 226.95 16.91C226.46 17.86 225.44 18.18 224.73 17.61C222.46 15.8 219.09 14.84 215 14.84C211.86 14.83 211.39 14.91 210.41 15.61C207.51 17.68 207.97 20.68 211.43 22.28C212.81 22.92 213.93 23.27 219.17 24.69C222.2 25.51 225.97 27.19 227.61 28.43C229.2 29.65 230.58 31.65 231.34 33.86C233.38 39.78 230.37 45.78 223.83 48.82C219.21 50.97 213.17 51.51 207 50.34Z M310.83 50.37C307.19 49.57 304.77 48.3 302.34 45.88C298.78 42.34 297.43 38.34 297.79 32.41C298.21 25.58 302.01 20.41 308.4 17.94C311.04 16.92 317.65 16.69 320.07 17.54C322.17 18.28 324 19.28 324 19.7C324 19.86 324.3 20 324.67 20C325.39 20 325.32 20.88 325.51 8.08C325.53 6.93 325.7 5.84 325.88 5.65C326.09 5.45 328.1 5.35 331.03 5.41L335.83 5.5 335.83 27.67L335.83 49.83 330.83 49.83L325.83 49.83 325.83 48.61C325.83 47.94 325.73 47.28 325.6 47.15C325.47 47.03 324.79 47.36 324.1 47.89C322.58 49.06 320.85 49.82 318.18 50.5C315.69 51.13 314.2 51.1 310.83 50.37Z M319.51 42.21C321.56 41.67 322.51 41.13 323.75 39.83C325.25 38.27 325.72 36.81 325.75 33.67C325.78 30.46 325.3 29.02 323.66 27.38C321.3 25.02 316.77 24.25 313.57 25.67C311.53 26.57 309.5 28.94 308.85 31.16C308.22 33.34 308.21 34.02 308.81 36.27C309.64 39.38 311.74 41.4 314.99 42.21C317.06 42.73 317.58 42.73 319.51 42.21Z M371.17 50.37C365.5 49.13 360.61 45.83 358.18 41.59C357.26 39.98 356.01 35.57 356 33.9C356 32.11 357.08 28.15 358.12 26.17C360.19 22.24 363.86 19.46 369.41 17.61C372.45 16.6 380.24 16.6 383.23 17.6C389.44 19.68 393.59 23.35 395.46 28.4C396.3 30.65 396.26 36.84 395.39 39.27C395.05 40.24 394.59 41.21 394.38 41.42C394.17 41.63 394 41.96 394 42.15C394 42.66 391.06 45.74 389.5 46.88C387.18 48.58 384.25 49.76 380.6 50.49C377.33 51.14 374.53 51.1 371.17 50.37Z M379.47 41.97C381.45 41.42 383.7 38.92 384.42 36.46C385.14 33.99 385.14 33.22 384.45 31.14C383.09 27.09 380.26 25 376.11 25C373.82 25 372.69 25.42 370.6 27.06C368.4 28.79 367.85 30.06 367.86 33.49C367.86 36 367.99 36.74 368.63 37.92C369.55 39.6 371.73 41.57 373.15 41.98C374.6 42.4 377.94 42.39 379.47 41.97Z M244.5 50.17C241.28 49.36 238.76 47.76 237.75 45.88C236.28 43.14 236.22 42.71 236.03 33.83L235.83 25.17 233.67 25L231.5 24.83 231.41 21.63C231.29 17.86 231.47 17.6 234.09 17.54L235.83 17.5 236 13.33L236.17 9.17 240.95 9.07C244.2 9.01 245.89 9.1 246.2 9.36C246.55 9.65 246.67 10.68 246.67 13.33C246.67 15.89 246.79 17.02 247.1 17.28C247.35 17.49 249.33 17.69 251.69 17.74L255.83 17.83 255.83 21.33L255.83 24.83 251.33 25L246.83 25.17 246.83 32.44L246.83 39.72 248.02 40.81C249.47 42.14 251.29 42.49 254.08 41.99C255.24 41.78 256.21 41.75 256.38 41.92C256.54 42.08 256.77 43.65 256.89 45.4C257.09 48.56 257.09 48.59 256.23 49.15C254.12 50.54 248.05 51.07 244.5 50.17Z M268.93 50.19C265.95 49.34 262.94 47.09 261.82 44.89C261.52 44.31 260.99 42.93 260.64 41.83C260.07 40.04 260.01 38.73 260 28.94C260 21.05 260.11 17.97 260.38 17.8C260.6 17.67 262.76 17.52 265.2 17.47C268.68 17.4 269.71 17.48 270.01 17.85C270.29 18.18 270.39 20.64 270.36 26.24C270.28 40.06 270.96 41.95 276.13 42.24C279.01 42.4 280.31 41.84 281.91 39.72L283 38.28 283.01 28.39C283.01 22.95 283.12 18.32 283.26 18.1C283.58 17.61 292.88 17.41 293.35 17.89C293.55 18.08 293.64 24.29 293.59 34.02L293.5 49.83 288.75 49.93L284 50.02 284 48.73C284 48.02 283.91 47.36 283.8 47.25C283.7 47.14 282.7 47.64 281.59 48.36C280.48 49.07 279.03 49.83 278.37 50.04C276.49 50.62 270.75 50.71 268.93 50.19Z M3.22 49.78C3.1 49.66 3 39.98 3 28.28L3 7 9.82 7L16.63 7 17.74 8.92C18.34 9.97 19.18 11.51 19.6 12.33C20.02 13.16 20.5 14.06 20.67 14.33C21.41 15.52 24 20.07 24 20.18C24 20.26 24.68 21.46 25.5 22.85C26.33 24.25 27 25.44 27 25.5C27 25.56 27.61 26.67 28.36 27.97C29.72 30.32 30.49 30.86 30.91 29.75C31.03 29.43 31.54 28.57 32.03 27.83C32.53 27.1 33.26 25.9 33.65 25.17C34.05 24.43 34.63 23.43 34.94 22.95C35.42 22.19 38.14 17.69 39.17 15.95C39.35 15.64 39.73 14.96 40.02 14.44C40.3 13.92 41.41 12.03 42.48 10.24L44.42 6.99 50.8 7.08L57.17 7.17 57.17 28.5L57.17 49.83 51.67 49.83L46.17 49.83 46.08 37.01C46.03 29.95 45.86 24.06 45.69 23.89C45.51 23.71 45.03 24.31 44.51 25.38C44.02 26.36 43.34 27.62 42.98 28.17C42.63 28.72 42.23 29.39 42.11 29.66C41.98 29.93 40.58 32.33 38.99 34.99C37.41 37.66 36.01 40.06 35.88 40.33C35.59 40.94 35.03 41.87 34.21 43.08C33.6 43.98 33.53 44 30.21 43.99C28.35 43.99 26.67 43.88 26.47 43.74C26 43.43 24.84 41.57 23 38.17C22.2 36.7 21.28 35.05 20.95 34.5C20.61 33.95 20.24 33.27 20.11 33C19.38 31.41 14.57 23.67 14.31 23.67C14.12 23.67 14 28.95 14 36.83L14 50 8.72 50C5.82 50 3.34 49.9 3.22 49.78Z M62.16 49.59C62.07 49.36 62.03 42.12 62.08 33.5L62.17 17.83 66.67 17.74C69.14 17.68 71.51 17.73 71.92 17.83L72.67 18.01 72.59 33.92L72.5 49.83 67.41 49.93C63.52 50 62.28 49.92 62.16 49.59Z M77.89 49.76C77.76 49.55 77.81 27.93 77.96 19.74L78 17.65 82.92 17.74L87.83 17.83 87.93 19.17C88.09 21.47 88.21 21.51 89.99 19.91C92.29 17.84 94.83 16.94 98.02 17.07L100.5 17.17 100.59 21.58L100.69 26 97.93 26C94.43 26 92.34 26.71 90.53 28.53C88.39 30.68 88.25 31.4 88.03 41.17L87.83 49.83 82.94 49.93C80.25 49.98 77.98 49.9 77.89 49.76Z M104.08 33.92L104.17 17.83 109.08 17.74L114 17.65 114 19.27C114 20.16 114.1 20.99 114.23 21.12C114.35 21.24 114.99 20.83 115.65 20.2C116.3 19.56 117.66 18.62 118.67 18.11C120.3 17.27 120.85 17.17 123.67 17.17L126.83 17.17 126.83 21.5L126.83 25.83 123.67 26.02C119.93 26.24 117.91 27.05 116.21 29.04C114.4 31.15 114 33.6 114 42.46L114 50 109 50L103.99 50 104.08 33.92Z M171.49 49.59C171.4 49.36 171.37 42.12 171.41 33.5L171.5 17.83 175.83 17.74C181.58 17.61 181.67 17.64 181.67 19.51C181.67 20.59 181.8 21 182.15 21C182.42 21 182.75 20.8 182.9 20.56C183.4 19.75 185.5 18.39 187.33 17.69C189.57 16.85 194.24 16.7 194.53 17.47C194.63 17.73 194.59 19.71 194.44 21.88L194.17 25.83 191.17 26.03C186.59 26.32 184.26 27.59 182.64 30.67C181.88 32.11 181.84 32.52 181.67 41L181.5 49.83 176.58 49.93C172.82 50 171.61 49.92 171.49 49.59Z M341.44 49.58C341.29 49.35 341.16 42.29 341.14 33.88C341.12 21.23 341.2 18.52 341.58 18.13C341.94 17.78 343.16 17.67 346.67 17.67C349.23 17.67 351.38 17.81 351.49 17.98C351.79 18.46 351.85 49.11 351.55 49.58C351.37 49.89 349.98 50 346.5 50C343.03 50 341.63 49.88 341.44 49.58Z M64.47 13.37C62.87 12.64 61.81 11.4 61.28 9.63C60.65 7.52 62.03 4.69 64.25 3.54C65.72 2.78 69.54 2.81 70.73 3.59C72.57 4.81 73.17 5.97 73.17 8.33C73.17 10.96 72.55 11.98 70.26 13.18C68.37 14.17 66.38 14.23 64.47 13.37Z M343.81 13.4C341.43 12.4 340.33 10.77 340.33 8.22C340.33 7.25 340.61 6.37 341.21 5.45C342.49 3.48 343.66 2.9 346.38 2.9C348.26 2.9 348.87 3.05 349.94 3.75C351.73 4.94 352.47 6.61 352.23 8.93C352 11.09 350.97 12.39 348.72 13.37C346.97 14.14 345.6 14.14 343.81 13.4Z"};
+  const ns = 'http://www.w3.org/2000/svg';
+  const clamp = x => Math.min(1, Math.max(0,x));
+  const phase = (time,start,end) => clamp((time-start)/(end-start));
+  const smooth = x => x*x*(3-2*x);
+  const easeOut = x => 1-Math.pow(1-x,3);
+  const mix = (a,b,t) => a+(b-a)*t;
+  function mixInk(a,b,t) {
+    const parse = s => [1,3,5].map(i => parseInt(s.slice(i,i+2),16));
+    const source=parse(a), dest=parse(b);
+    return '#'+source.map((c,i)=>Math.round(mix(c,dest[i],t)).toString(16).padStart(2,'0')).join('');
+  }
+  function frameAt(time, readyAt, scene) {
+    const {width,height,target,reduced=false,ink='#FFFFFF',destinationInk=ink}=scene;
+    const heroW=Math.max(66,Math.min(144,width*.22,height*.235));
+    const wordW=heroW*1.37;
+    const hero={x:width/2-heroW/2,y:height/2-(heroW*271/372+20+wordW*54/399)/2,w:heroW};
+    const start=Number.isFinite(readyAt) ? (reduced ? readyAt : Math.max(640,readyAt)) : Infinity;
+    const a=!Number.isFinite(start) ? 0 : (reduced ? Number(time>=start) : phase(time,start,start+420));
+    const u=smooth(a), a1=reduced?1:easeOut(phase(time,0,265)), a2=reduced?1:easeOut(phase(time,105,395));
+    const dest=target||hero;
+    return {
+      x:mix(hero.x,dest.x,u),y:mix(hero.y,dest.y,u),w:mix(hero.w,dest.w,u),
+      first:a1,second:a2,dy1:8*(1-a1),dx2:10*(1-a2),dy2:5*(1-a2),
+      wordX:(width-wordW)/2,wordY:hero.y+heroW*271/372+20,wordW,
+      wordOpacity:(reduced?1:smooth(phase(time,290,530)))*(1-smooth(phase(a,0,.36))),
+      scrim:1-smooth(phase(a,.10,.94)),
+      markOpacity:target?1:1-smooth(phase(a,.06,.85)),
+      slowOpacity:(Number.isFinite(readyAt)?time<readyAt:true) && time>=1600 ? (reduced?1:smooth(phase(time,1600,1780))) : 0,
+      ink:mixInk(ink,destinationInk,smooth(phase(a,.24,.90))),done:time>=start && a===1
+    };
+  }
+  // Works with WebViews and HTML renderers. ready must describe this boot attempt.
+  function play({host,main,anchor=null,ready,focusTarget=null,background='#0B1020',
+                 ink='#FFFFFF',destinationInk=ink,reducedMotion,signal}) {
+    if (!host || !main || !ready || typeof ready.then!=='function')
+      throw new TypeError('Se requieren host, main y una promesa ready.');
+    if (host===main || main.contains(host)) throw new TypeError('host debe contener la capa y ser independiente de main.');
+    const colorOK=c=>/^#[0-9a-f]{6}$/i.test(c);
+    if (![background,ink,destinationInk].every(colorOK)) throw new TypeError('Usa colores HEX de seis dígitos.');
+    const motionPref=window.matchMedia('(prefers-reduced-motion: reduce)');
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:absolute;inset:0;z-index:10;overflow:hidden;pointer-events:auto;';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('aria-hidden','true');
+    svg.style.cssText='display:block;width:100%;height:100%;pointer-events:none';
+    svg.innerHTML='<rect width="100%" height="100%" fill="'+background+'"/><g><g><path d="'+forms.r1+'"/></g><g><path d="'+forms.r2+'"/></g></g><path fill-rule="evenodd" fill="'+ink+'" d="'+forms.word+'"/>';
+    const [scrim,mark,word]=svg.children;
+    const [one,two]=mark.children;
+    const label=document.createElement('div');
+    label.setAttribute('role','status');
+    label.style.cssText='position:absolute;left:8px;right:8px;top:70%;text-align:center;font:14px system-ui,sans-serif;color:'+ink+';opacity:0';
+    overlay.append(svg,label);
+    const prior={busy:main.getAttribute('aria-busy'),inert:main.inert,anchor:anchor?.style.visibility};
+    const clock=performance.now();let readyAt=Infinity,raf,stopped=false,ownsAnchor=false;
+    main.inert=true;main.setAttribute('aria-busy','true');
+    host.append(overlay);
+    let resolveEnd,rejectEnd;
+    const finished=new Promise((resolve,reject)=>{resolveEnd=resolve;rejectEnd=reject;});
+    function restoreAnchor(){
+      if (anchor && ownsAnchor) {anchor.style.visibility=prior.anchor;ownsAnchor=false;}
+    }
+    function stop(){
+      if(stopped)return false;
+      stopped=true;cancelAnimationFrame(raf);signal?.removeEventListener('abort',abort);
+      restoreAnchor();
+      overlay.remove();main.inert=prior.inert;
+      if(prior.busy===null)main.removeAttribute('aria-busy');else main.setAttribute('aria-busy',prior.busy);
+      return true;
+    }
+    function abort(){if(stop())rejectEnd(new DOMException('Inicio cancelado','AbortError'));}
+    function targetRect(bounds){
+      if(!anchor?.isConnected || (!ownsAnchor && getComputedStyle(anchor).visibility!=='visible'))return null;
+      const rect=anchor.getBoundingClientRect();
+      // Fit the visible 372:271 symbol inside the provided box, even if it is square.
+      if(rect.width<2 || rect.height<2)return null;
+      const w=Math.min(rect.width,rect.height*372/271),h=w*271/372;
+      return {x:rect.left-bounds.left+(rect.width-w)/2,y:rect.top-bounds.top+(rect.height-h)/2,w};
+    }
+    function paint(){
+      if(stopped)return;
+      const time=performance.now()-clock,bounds=overlay.getBoundingClientRect();
+      const target=targetRect(bounds);
+      if(target && !ownsAnchor){anchor.style.visibility='hidden';ownsAnchor=true;}
+      if(!target)restoreAnchor();
+      const f=frameAt(time,readyAt,{width:bounds.width,height:bounds.height,target,
+        reduced:reducedMotion ?? motionPref.matches,ink,destinationInk});
+      if(f.done){
+        if(stop()){
+          if (focusTarget?.isConnected && !main.inert && (!document.activeElement || document.activeElement===document.body || document.activeElement===host))
+            focusTarget.focus({preventScroll:true});
+          resolveEnd();
+        }
+        return;
+      }
+      function attr(el,key,val){el.setAttribute(key,String(val));}
+      attr(scrim,'opacity',f.scrim);
+      attr(mark,'transform','translate('+f.x+' '+f.y+') scale('+(f.w/372)+')');
+      attr(mark,'opacity',f.markOpacity);attr(mark,'fill',f.ink);
+      attr(one,'opacity',f.first);attr(one,'transform','translate(0 '+(f.dy1*372/f.w)+')');
+      attr(two,'opacity',f.second);attr(two,'transform','translate('+(f.dx2*372/f.w)+' '+(f.dy2*372/f.w)+')');
+      attr(word,'transform','translate('+f.wordX+' '+f.wordY+') scale('+(f.wordW/399)+')');
+      attr(word,'opacity',f.wordOpacity);
+      if(f.slowOpacity>0 && !label.textContent)label.textContent='Preparando el espacio de trabajo…';
+      label.style.opacity=String(f.slowOpacity);
+      // After the entry, hold a still frame while boot continues.
+      if(!Number.isFinite(readyAt) && time>=1790) {
+        raf=0;
+        return;
+      }
+      raf=requestAnimationFrame(paint);
+    }
+    function refresh(){if(!stopped && !raf)raf=requestAnimationFrame(paint);}
+    const observer=new ResizeObserver(refresh);observer.observe(host);
+    motionPref.addEventListener('change',refresh);
+    const dispose=()=>{observer.disconnect();motionPref.removeEventListener('change',refresh);};
+    finished.then(dispose,dispose);
+    if(signal?.aborted){abort();}else{
+      signal?.addEventListener('abort',abort,{once:true});
+      paint();
+    }
+    Promise.resolve(ready).then(()=>{if(!stopped){readyAt=performance.now()-clock;refresh();}},e=>{if(stop())rejectEnd(e);});
+    return finished;
+  }
+  return {play,frameAt,forms};
+});

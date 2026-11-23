@@ -1,15 +1,52 @@
 @import "tailwindcss";
+
+/*
+ * "Doble Erre" identity: one ink. Dark = white on midnight #0B1020, light = midnight on white.
+ * Every color in the app comes from these tokens; contrast is checked by theme.test.ts (WCAG AA).
+ * The light set applies through prefers-color-scheme, which Electron drives from the theme the user picks
+ * (Sistema / Claro / Oscuro) or from Windows / Ubuntu when "Sistema" is chosen.
+ */
 @theme {
-  --color-bg: #111317;
-  --color-surface: #1b1f27;
-  --color-line: #2d323d;
-  --color-accent: #3b82f6;
-  --color-ok: #34d399;
-  --color-muted: #a6aebb;
+  --color-bg: #0B1020;
+  --color-bar: #0B1020;
+  --color-surface: #121A30;
+  --color-hover: #1C2541;
+  --color-line: #27324F;
+  --color-fg: #F3F5FA;
+  --color-muted: #A7B0C6;
+  --color-accent: #8EA6FF;
+  --color-primary: #FFFFFF;
+  --color-on-primary: #0B1020;
+  --color-ok: #34D399;
+  --color-warn: #FBBF24;
+  --color-danger: #FCA5A5;
   --font-sans: Inter, system-ui, sans-serif;
 }
+:root { color-scheme: dark light; --shadow-card: 0 10px 30px -12px rgb(0 0 0 / .5); }
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #F4F6FB;
+    --color-bar: #FFFFFF;
+    --color-surface: #FFFFFF;
+    --color-hover: #E7EBF4;
+    --color-line: #D6DCE8;
+    --color-fg: #0B1020;
+    --color-muted: #4A5470;
+    --color-accent: #2B47D3;
+    --color-primary: #0B1020;
+    --color-on-primary: #FFFFFF;
+    --color-ok: #047857;
+    --color-warn: #92400E;
+    --color-danger: #B91C1C;
+    --shadow-card: 0 10px 30px -14px rgb(11 16 32 / .18);
+  }
+}
+
 html, body, #root { height: 100%; margin: 0; }
-body { background: radial-gradient(1200px 600px at 20% -10%, #1a2540 0%, var(--color-bg) 55%); background-color: var(--color-bg); color: #eef0f4; font-family: var(--font-sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body {
+  background: radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--color-accent) 12%, var(--color-bg)) 0%, var(--color-bg) 55%);
+  background-color: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
 ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 9999px; border: 2px solid var(--color-bg); }
 button { transition: background-color .15s; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -22,7 +59,7 @@ button { transition: background-color .15s; }
 .radar { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid var(--color-accent); animation: radar 2.4s ease-out infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(59 130 246 / .6); } 100% { box-shadow: 0 0 0 12px rgb(59 130 246 / 0); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 60%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
 .ico { display: inline-grid; transition: transform .2s ease; }
 .group:hover .ico-slide { transform: translateX(4px); }
 .group:hover .ico-turn { transform: rotate(90deg) scale(1.1); }
@@ -38,14 +75,6 @@ button { transition: background-color .15s; }
 .drag { -webkit-app-region: drag; user-select: none; }
 .drag button, .drag input, .drag a { -webkit-app-region: no-drag; }
 
-/* Logo entrance: pops in, then its strokes draw themselves. */
-@keyframes logo-in { 0% { opacity: 0; transform: scale(.3) rotate(-25deg); } 60% { opacity: 1; transform: scale(1.1) rotate(4deg); } 100% { transform: none; } }
-@keyframes draw { to { stroke-dashoffset: 0; } }
-.logo-in { animation: logo-in .9s cubic-bezier(.2,.9,.3,1.2) both; }
-.logo-in .draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .6s ease-out .45s forwards; }
-.logo-in .d2 { animation-delay: .7s; } .logo-in .d3 { animation-delay: .9s; }
-
-
 /* Copy: the icon tilts on hover, then a check pops in with a ring burst. */
 .group:hover .ico-copy { transform: translate(-1px, -1px) rotate(-8deg); }
 @keyframes check-in { from { transform: scale(0) rotate(-60deg); } to { transform: none; } }
@@ -53,7 +82,7 @@ button { transition: background-color .15s; }
 .anim-check { display: inline-grid; animation: check-in .35s cubic-bezier(.2,.9,.3,1.5) both; }
 .burst { position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--color-ok); animation: burst .6s ease-out forwards; pointer-events: none; }
 
-/* "Live" dot: presenting / controlling. */
+/* "Live" dot: presenting / controlling. Red reads as "on air" in both themes. */
 @keyframes live { 0%, 100% { box-shadow: 0 0 0 0 rgb(239 68 68 / .7); } 50% { box-shadow: 0 0 0 8px rgb(239 68 68 / 0); } }
 .live-dot { display: inline-block; width: 14px; height: 14px; border-radius: 9999px; background: #ef4444; animation: live 1.6s ease-in-out infinite; }
 .live-dot.small { width: 8px; height: 8px; }
@@ -61,15 +90,44 @@ button { transition: background-color .15s; }
 @keyframes side-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 .side-in { animation: side-in .2s ease-out both; }
 
-@media (prefers-reduced-motion: reduce) { .logo-in, .logo-in .draw, .hero-ring, .anim-check, .burst, .live-dot, .side-in { animation: none !important; stroke-dashoffset: 0 !important; } }
 
-/* Home: soft glow behind the logo and a faint dot grid, so the page has depth without noise. */
-.home-bg { background-image: radial-gradient(rgb(255 255 255 / .045) 1px, transparent 1px); background-size: 22px 22px; }
-@keyframes glow { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: .85; transform: scale(1.12); } }
-.hero-glow { position: absolute; width: 180px; height: 180px; border-radius: 9999px; background: radial-gradient(closest-side, rgb(59 130 246 / .45), rgb(124 92 255 / .2), transparent); filter: blur(8px); animation: glow 4s ease-in-out infinite; }
-.title-gradient { background: linear-gradient(90deg, #fff 20%, #a5b4fc 60%, #93c5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.card { border-radius: 1rem; border: 1px solid var(--color-line); background: linear-gradient(180deg, rgb(255 255 255 / .03), transparent 40%), var(--color-surface); box-shadow: 0 10px 30px -12px rgb(0 0 0 / .5); transition: border-color .2s, transform .2s, box-shadow .2s; }
-.card:hover, .card:focus-within { border-color: rgb(59 130 246 / .45); transform: translateY(-2px); box-shadow: 0 16px 40px -14px rgb(59 130 246 / .35); }
+@media (prefers-reduced-motion: reduce) { .anim-check, .burst, .live-dot, .side-in { animation: none !important; transition: none !important; } }
+
+/* Home: a faint dot grid and a soft glow behind the mark, so the page has depth without noise. */
+.home-bg { background-image: radial-gradient(color-mix(in srgb, var(--color-fg) 7%, transparent) 1px, transparent 1px); background-size: 22px 22px; }
+@keyframes glow { 0%, 100% { opacity: .5; transform: scale(1); } 50% { opacity: .8; transform: scale(1.1); } }
+.hero-glow { position: absolute; width: 220px; height: 220px; border-radius: 9999px; background: radial-gradient(closest-side, color-mix(in srgb, var(--color-accent) 35%, transparent), transparent); filter: blur(10px); animation: glow 4s ease-in-out infinite; }
+.card { border-radius: 1rem; border: 1px solid var(--color-line); background: linear-gradient(180deg, color-mix(in srgb, var(--color-fg) 3%, transparent), transparent 40%), var(--color-surface); box-shadow: var(--shadow-card); transition: border-color .2s, transform .2s, box-shadow .2s; }
+.card:hover, .card:focus-within { border-color: color-mix(in srgb, var(--color-accent) 50%, transparent); transform: translateY(-2px); }
 .meeting-row { transition: border-color .2s, background-color .2s; }
-.meeting-row:hover { border-color: rgb(59 130 246 / .5); background-color: rgb(59 130 246 / .08); }
+.meeting-row:hover { border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); background-color: color-mix(in srgb, var(--color-accent) 8%, transparent); }
 @media (prefers-reduced-motion: reduce) { .hero-glow { animation: none !important; } .card:hover, .card:focus-within { transform: none; } }
+
+/*
+ * Theme switch: a pill split on a diagonal in the brand's two inks. The midnight side sweeps across,
+ * the thumb travels and turns, the sun gives way to the moon. Same colors in both themes on purpose:
+ * it shows both inks, like the brand sheet.
+ */
+.theme-switch { position: relative; width: 60px; height: 28px; flex: none; border-radius: 9999px; overflow: hidden; cursor: pointer;
+  background: #FFFFFF; border: 1px solid var(--color-line); box-shadow: inset 0 1px 3px rgb(11 16 32 / .22); }
+.theme-switch__ink { position: absolute; inset: 0; background: #0B1020;
+  clip-path: polygon(62% 0, 100% 0, 100% 100%, 42% 100%); transition: clip-path .5s cubic-bezier(.65,0,.35,1); }
+.theme-switch[data-dark="true"] .theme-switch__ink { clip-path: polygon(44% 0, 100% 0, 100% 100%, 24% 100%); }
+.theme-switch__hint { position: absolute; top: 50%; display: grid; translate: 0 -50%; transition: opacity .35s, transform .5s cubic-bezier(.65,0,.35,1); }
+.theme-switch__hint--moon { right: 7px; color: #FFFFFF; }
+.theme-switch__hint--sun { left: 6px; color: #0B1020; opacity: 0; transform: rotate(-90deg) scale(.6); }
+.theme-switch[data-dark="true"] .theme-switch__hint--moon { opacity: 0; transform: rotate(90deg) scale(.6); }
+.theme-switch[data-dark="true"] .theme-switch__hint--sun { opacity: 1; transform: none; }
+.theme-switch__thumb { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 9999px; display: grid; place-items: center;
+  background: #0B1020; color: #FFFFFF; box-shadow: 0 2px 6px rgb(11 16 32 / .35);
+  transition: transform .5s cubic-bezier(.65,0,.35,1), background-color .3s, color .3s; }
+.theme-switch[data-dark="true"] .theme-switch__thumb { transform: translateX(32px) rotate(360deg); background: #FFFFFF; color: #0B1020; box-shadow: 0 0 0 2px rgb(255 255 255 / .15), 0 2px 8px rgb(0 0 0 / .5); }
+.theme-switch__sun, .theme-switch__moon { grid-area: 1 / 1; display: grid; transition: opacity .3s, transform .5s cubic-bezier(.65,0,.35,1); }
+.theme-switch__moon { opacity: 0; transform: rotate(-90deg) scale(.5); }
+.theme-switch[data-dark="true"] .theme-switch__sun { opacity: 0; transform: rotate(90deg) scale(.5); }
+.theme-switch[data-dark="true"] .theme-switch__moon { opacity: 1; transform: none; }
+.theme-switch:hover .theme-switch__thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 30%, transparent), 0 2px 6px rgb(11 16 32 / .35); }
+
+/* The sweep itself is driven from switchTheme() so it can start at the pressed control. */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+@media (prefers-reduced-motion: reduce) { .theme-switch *, .theme-switch__ink { transition: none !important; } }

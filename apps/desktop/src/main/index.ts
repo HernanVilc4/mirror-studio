@@ -1,10 +1,26 @@
-import { app, BrowserWindow, Menu, globalShortcut, ipcMain, screen, session, desktopCapturer, shell } from 'electron'
+import { app, BrowserWindow, Menu, globalShortcut, ipcMain, nativeTheme, screen, session, desktopCapturer, shell } from 'electron'
 import { join } from 'node:path'
 import { hostname } from 'node:os'
 import { ClientMessage, DEFAULT_PORT, isValidCode, normalizeCode } from '@mirror-studio/protocol'
 import { AppSession, type UiEvent } from './app-session'
 import { createDriver } from './input'
 import { firewallCommand, firewallStatus, listInterfaces, pickInterface, scanLan } from './network'
+import { isThemeSource, loadTheme, paintWindow, setTheme, themeInfo, WINDOW_COLORS } from './theme'
+// Bundled as files next to the build output, so the window keeps its icon in the packaged app too.
+import iconIco from '../../build/icon.ico?asset'
+import iconPng from '../../build/icon.png?asset'
+import iconLightIco from '../../build/icon-light.ico?asset'
+import iconLightPng from '../../build/icon-light.png?asset'
+
+/**
+ * Window and taskbar icon follow the theme: official (white on midnight) in dark, the kit's light alternative
+ * (midnight on white) in light. ICO on Windows for crisp 16–256 px. The .exe, installer and shortcut icons are
+ * files and cannot change at run time: they keep the official icon.
+ */
+const windowIcon = () => {
+  const dark = nativeTheme.shouldUseDarkColors
+  return process.platform === 'win32' ? (dark ? iconIco : iconLightIco) : (dark ? iconPng : iconLightPng)
+}
 
 // Show real LAN addresses in WebRTC candidates. Without this Chromium hides them behind mDNS names that
 // lab networks often do not resolve, and media never connects.
@@ -54,13 +70,21 @@ const SYSTEM_AUDIO = process.platform === 'win32' || process.env.MS_TEST_AUDIO =
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null) // no File/Edit/View bar: this is a call window, not a document editor
-  win = new BrowserWindow({
-    autoHideMenuBar: true, icon: join(__dirname, '../../build/icon.png'),
+  loadTheme()
+  const colors = nativeTheme.shouldUseDarkColors ? WINDOW_COLORS.dark : WINDOW_COLORS.light
+  const w = (win = new BrowserWindow({
+    autoHideMenuBar: true, icon: windowIcon(),
     // Our own title bar (logo + name, drawn by the page); the OS keeps only its minimize/maximize/close buttons.
-    titleBarStyle: 'hidden', titleBarOverlay: { color: '#0d0f13', symbolColor: '#e6e8ec', height: 40 },
-    width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: '#111317', title: 'Mirror Studio',
+    titleBarStyle: 'hidden', titleBarOverlay: { color: colors.bar, symbolColor: colors.symbols, height: 40 },
+    // Cold start paints the theme background at once, before the page and the brand entrance load.
+    width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: colors.background, title: 'MirrorStudio',
     webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true }
-  })
+  }))
+  const onTheme = () => { if (w.isDestroyed()) return; paintWindow(w); w.setIcon(windowIcon()); w.webContents.send('theme', themeInfo()) }
+  nativeTheme.on('updated', onTheme) // OS switched light/dark (Windows or Ubuntu), or the user picked a theme
+  w.on('closed', () => nativeTheme.off('updated', onTheme))
+  ipcMain.handle('theme', () => themeInfo())
+  ipcMain.handle('set-theme', (_e, source: unknown) => { if (isThemeSource(source)) setTheme(source); return themeInfo() })
   // Links never navigate the app window.
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' } })
   win.webContents.on('will-navigate', (e) => e.preventDefault())
@@ -78,7 +102,11 @@ app.whenReady().then(() => {
   // Nothing but screen capture (and the 'media' gate in front of it) is granted: no other permission.
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media' || permission === 'clipboard-sanitized-write' || permission === 'fullscreen') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
 
+  // MS_TEST_BOOT=slow|fail lets a manual test see the slow and the failed start of the brand entrance (and the retry).
+  let bootFailures = process.env.MS_TEST_BOOT === 'fail' ? 1 : 0
   ipcMain.handle('net-info', async () => {
+    if (process.env.MS_TEST_BOOT === 'slow') await new Promise((r) => setTimeout(r, 3500))
+    if (bootFailures > 0) { bootFailures--; throw new Error('no se pudo leer la red (prueba)') }
     const ifaces = listInterfaces()
     const chosen = pickInterface(ifaces)
     const exe = app.getPath('exe')

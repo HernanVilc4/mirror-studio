@@ -55,6 +55,32 @@ npm run dev                                # electron-vite
   - las marcas (círculo, óvalo o borde punteado rojos y numerados) las dibuja `docs/tools/anotar.py` (`--test` lo comprueba)
   - referencia del resultado: `docs/tools/ejemplo-anotacion.png`
 
+### Identidad «Doble Erre» y temas (23-nov)
+- **Fuente:** `idMarca/` (kit `.zip`, lámina, vídeo y prompt). Se integró siguiendo su `PROMPT-AGENTE.txt`.
+- **Iconos:**
+  - `apps/desktop/build/icon.ico` (oficial, 16–256 px) y `icon-light.ico`, generado a partir de los PNG «claro» del kit
+  - `icon.png` e `icon-light.png`, y `build/icons/` (hicolor 16–512, para `linux.icon` en `electron-builder.yml`)
+  - favicon en `src/renderer/public/`
+  - el portable incrusta el `.ico` en `Mirror Studio.exe` con `resedit`, en `scripts/package-win.cjs`
+- **Icono de la ventana y la barra de tareas:** cambia con el tema (oficial en oscuro, claro en claro), con `windowIcon()` en `main/index.ts`. El `.exe`, el instalador y los accesos directos no pueden cambiar en vivo y llevan el oficial.
+- **Entrada de marca:**
+  - `src/renderer/src/brand/mirrorstudio-intro.js` es una copia sin cambios del kit
+  - se monta en `Main()` de `App.tsx` y se reproduce una vez por arranque en frío
+  - **señal de «vista lista»:** `C.ready` en `controller.ts`, que se resuelve cuando llega `netInfo` (~300 ms). Si falla, la portada muestra el error con «Reintentar» (`retryBoot`)
+  - **ancla:** `[data-brand-anchor]` en la cabecera de la portada, una caja de 372×271
+  - verificado a 1/10 de velocidad: el último fotograma coincide en posición, tamaño y color, sin duplicarse
+- **Temas:**
+  - `main/theme.ts`: `nativeTheme.themeSource`, guardado en `userData/settings.json`
+  - el sistema se detecta como «Windows 10/11» o el `NAME` de `/etc/os-release` (Ubuntu)
+  - la barra de título nativa (`titleBarOverlay`), el fondo de la ventana y el icono se repintan con `nativeTheme 'updated'`
+  - **interruptor:** píldora partida en diagonal (blanco y medianoche) más un botón «Sistema» con el nombre del SO
+  - **transición:** el cambio barre la ventana en diagonal desde el control pulsado (View Transitions, `switchTheme` en `App.tsx`)
+- **Colores:** todos salen de tokens en `index.css`, con el oscuro en `@theme` y el claro en `prefers-color-scheme: light`. `src/renderer/src/theme.test.ts` comprueba el contraste WCAG AA de los dos temas (40 comprobaciones).
+- **Pruebas manuales:**
+  - `MS_TEST_BOOT=slow|fail npm run dev` fuerza el arranque lento («Preparando el espacio de trabajo…») o el fallido con reintento
+  - `npx electron-vite dev --remoteDebuggingPort 9222` permite manejar la app por CDP sin tocar el ratón
+- **Sin verificar aún:** Ubuntu (que el overlay de la barra de título y la detección del tema funcionen ahí), el movimiento reducido real del sistema y los paquetes `.exe` y portable compilados.
+
 ### Control remoto que dejaba de responder (arreglado el 23-nov)
 - **Síntoma:** al controlar una PC Windows, el puntero dejaba de actuar a los pocos segundos, pero el vídeo seguía.
 - **Causa:** en el ayudante de PowerShell (`input.ts`), la rueda hacia abajo envía `-120`. `[uint32](-120)` lanza una excepción y, con `$ErrorActionPreference='Stop'`, el script moría. Desde ahí se perdía toda entrada remota hasta reiniciar la app, porque el ayudante se crea una sola vez.

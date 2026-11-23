@@ -19,6 +19,7 @@ let presentTimer = 0
 let presentSource: { id: string | null; audio: boolean } | null = null
 let scanTimer = 0
 let unsub: (() => void) | null = null
+let unsubTheme: (() => void) | null = null
 let statsTimer = 0
 
 const ui = () => useUi.getState()
@@ -34,9 +35,27 @@ export function init() {
     else if (e.t === 'rtc-in') void hub?.onSignal(e.from, e.kind, e.data)
     else if (e.t === 'closed') leaveLocal(e.reason)
   })
-  void window.studio.netInfo().then((net) => set({ net, myName: ui().myName || net.name }))
+  ready = boot()
+  void window.studio.theme().then((theme) => set({ theme }))
+  unsubTheme = window.studio.onTheme((theme) => set({ theme }))
+  // Discovery keeps running in the background; an empty list is a valid home screen, so it is not awaited.
   void scan(); scanTimer = window.setInterval(() => ui().phase === 'home' && void scan(), 7000)
 }
+
+/**
+ * "Main view ready" signal for the brand entrance: the home screen is mounted and can be used once this
+ * PC's network info is in (name, address, firewall). It rejects if that fails, and the home shows a retry.
+ */
+export let ready: Promise<void> = Promise.resolve()
+function boot() {
+  set({ bootError: '' })
+  return window.studio.netInfo()
+    .then((net) => set({ net, myName: ui().myName || net.name }))
+    .catch((e: unknown) => { set({ bootError: cleanError(e) }); throw e })
+}
+export function retryBoot() { ready = boot(); ready.catch(() => { /* shown in the home screen */ }) }
+
+export async function setTheme(source: 'system' | 'light' | 'dark') { set({ theme: await window.studio.setTheme(source) }) }
 export async function scan() {
   set({ scanning: true })
   try { set({ found: await window.studio.discover() }) } finally { set({ scanning: false }) }
@@ -217,4 +236,4 @@ export function respondControl(controller: string, accept: boolean) {
 export function revokeControl(other: string) { send({ t: 'control-revoke', other }) }
 export function sendInput(target: string, input: ControlInput) { send({ t: 'control-input', target, input }) }
 
-export function dispose() { unsub?.(); unsub = null; clearInterval(scanTimer) }
+export function dispose() { unsub?.(); unsub = null; unsubTheme?.(); unsubTheme = null; clearInterval(scanTimer) }

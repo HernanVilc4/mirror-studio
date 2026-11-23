@@ -17,6 +17,9 @@ win:
       arch: [x64]
   icon: build/icon.ico
   # Code signing: set CSC_LINK / CSC_KEY_PASSWORD in the build environment. Unsigned builds show a SmartScreen warning.
+linux:
+  icon: build/icons          # brand kit hicolor PNGs, 16–512 px (16/24/32 use the "micro" drawing)
+  category: Network
 nsis:
   oneClick: false
   perMachine: true          # installs for all users; needs admin once, which the firewall rule also needs

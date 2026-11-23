@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src ws:" />
-    <title>Mirror Studio</title>
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="alternate icon" href="./favicon.ico" />
+    <title>MirrorStudio</title>
+    <!-- Cold start: the theme background is painted before any script or stylesheet loads. -->
+    <style>html { background: #0B1020; } @media (prefers-color-scheme: light) { html { background: #FFFFFF; } }</style>
   </head>
   <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>

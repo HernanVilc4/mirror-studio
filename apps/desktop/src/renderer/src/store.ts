@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { SessionState } from '@mirror-studio/protocol'
-import type { FoundMeeting, NetInfo } from '../../preload'
+import type { FoundMeeting, NetInfo, ThemeInfo } from '../../preload'
 
 export type Phase = 'home' | 'prep' | 'room'
 export type Intent = { kind: 'host'; meetingName: string } | { kind: 'join'; ip: string; port: number; label: string }
@@ -26,6 +26,10 @@ export interface Ui {
   /** My own presentation, to show it back to me (the "mirror"). Null while not presenting. */
   localPreview: MediaStream | null
   rtt?: number
+  /** Current theme and the OS it follows when set to "Sistema" (Windows 10/11, Ubuntu…). */
+  theme: ThemeInfo | null
+  /** Start-up failed (network info could not be read): shown with a retry button. */
+  bootError: string
   set: (p: Partial<Ui>) => void
 }
 
@@ -33,7 +37,7 @@ let n = 0
 export const useUi = create<Ui>((set) => ({
   phase: 'home', intent: null, myName: '', busy: false, error: '',
   net: null, found: [], scanning: false, hostInfo: null, state: null, me: '', notices: [], asks: [],
-  presentation: null, controlView: null, sharing: false, localPreview: null,
+  presentation: null, controlView: null, sharing: false, localPreview: null, theme: null, bootError: '',
   set: (p) => set(p)
 }))
 
