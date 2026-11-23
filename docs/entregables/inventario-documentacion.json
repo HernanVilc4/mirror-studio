@@ -1,5 +1,5 @@
 {
-  "commit": "7b8ab5ea586ebd7f920cf1340fc28efccefff8df",
+  "commit": "420be107f9b79353d5aa876cddc4a8ca09c83449",
   "source_files": [
     {
       "path": "packages/protocol/src/index.ts",
@@ -13,8 +13,8 @@
     },
     {
       "path": "apps/desktop/src/main/index.ts",
-      "sha256": "0f0dd15da2b4e4f390b119c2b340a5e4d0ac009c656c5b7f1971f9786fb5d547",
-      "lines": 144
+      "sha256": "8b64b0c830d4ba896498076239db2b384bf13ac6482cc84b298580af2c45d12a",
+      "lines": 147
     },
     {
       "path": "apps/desktop/src/main/meeting.ts",
@@ -77,8 +77,8 @@
     "No falta ninguna captura."
   ],
   "word_sha256": {
-    "Mirror Studio - codigo fuente.docx": "380f34444e7381c2053c0fdd1c7f2254aa926ca116032742c3fddcd01075c26e",
-    "Mirror Studio - manual de uso.docx": "5399a5fc4b609677be81555164d088c1dc7913115082598493d74fc705a76c44",
-    "Mirror Studio - para ejecutar.docx": "aaaf0bb5bc000fcb0028275efb72b2caa38d32891ee303cfd52c9f07994f8fcb"
+    "Mirror Studio - codigo fuente.docx": "c4f6d4732c62cd741ed3084c11ec1fb66c2558e529a609676d5d93740a75f034",
+    "Mirror Studio - manual de uso.docx": "b30d2ab03c0e9b3071549bcfe48931e4d57b627502688248ee7d719a2d7b2286",
+    "Mirror Studio - para ejecutar.docx": "581aec82b1ad4ceddff67c9acd64c421917e0029e2512210af6ff02f716a726c"
   }
 }
