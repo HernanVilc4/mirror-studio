@@ -20,4 +20,16 @@ button { transition: background-color .15s; }
 .anim-rise { animation: rise .22s ease-out both; }
 .anim-pop { animation: pop .18s ease-out both; }
 .radar { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid var(--color-accent); animation: radar 2.4s ease-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(59 130 246 / .6); } 100% { box-shadow: 0 0 0 12px rgb(59 130 246 / 0); } }
+.ico { display: inline-grid; transition: transform .2s ease; }
+.group:hover .ico-slide { transform: translateX(4px); }
+.group:hover .ico-turn { transform: rotate(90deg) scale(1.1); }
+.group:hover .ico-spin { transform: rotate(180deg); }
+.group:hover .ico-pop { transform: scale(1.2); }
+.ico-spinning { animation: spin .9s linear infinite; }
+.ico-flow { display: inline-grid; animation: nudge 1.6s ease-in-out infinite; }
+.live-ring { animation: ring 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ico, .ico-spinning, .ico-flow, .live-ring { animation: none !important; transition: none !important; } }
 @media (prefers-reduced-motion: reduce) { .anim-rise, .anim-pop, .radar { animation: none !important; } }

@@ -36,12 +36,19 @@ function Main() {
 
 // ---- Icons and round controls (Meet-style: icon only, name in tooltip and aria-label) ------------------
 
-type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop'
+type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop' | 'plus' | 'arrow' | 'refresh' | 'copy' | 'check' | 'help' | 'x'
 const PATHS: Record<IconName, React.ReactNode> = {
   'present': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4M12 13V8M9.5 10.5L12 8l2.5 2.5" /></>,
   'stop': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /><rect x="9" y="7" width="6" height="6" rx="1" /></>,
   'cursor': <path d="M5 3l14 7-6 2-2 6z" />,
   'leave': <path d="M3 14c5-4.5 13-4.5 18 0l-2.4 2.6-3.3-1.4v-2.6a9 9 0 0 0-6.6 0V15.2l-3.3 1.4z" />,
+  'plus': <path d="M12 5v14M5 12h14" />,
+  'arrow': <path d="M5 12h14M13 6l6 6-6 6" />,
+  'refresh': <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />,
+  'copy': <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>,
+  'check': <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  'help': <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.2 1-1.2 1.8M12 17h.01" /></>,
+  'x': <path d="M6 6l12 12M18 6L6 18" />,
   'more': <><circle cx="12" cy="5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="12" cy="19" r="1.2" /></>
 }
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
@@ -53,7 +60,7 @@ function Round({ label, icon, onClick, tone = 'neutral', pressed, short }: { sho
   return (
     <button aria-label={label} title={label} aria-pressed={pressed} onClick={onClick}
       className="group flex flex-col items-center gap-1 focus-visible:outline-none">
-      <span className={`grid h-12 place-items-center rounded-full shadow-lg transition-all group-hover:scale-105 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent ${tone === 'leave' ? 'w-16' : 'w-12'} ${tones[tone]}`}><Icon name={icon} /></span>
+      <span className={`${tone === 'accent' ? 'live-ring' : ''} grid h-12 place-items-center rounded-full shadow-lg transition-all group-hover:scale-105 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent ${tone === 'leave' ? 'w-16' : 'w-12'} ${tones[tone]}`}><Icon name={icon} /></span>
       <span className="text-[11px] text-muted">{short ?? label}</span>
     </button>
   )
@@ -61,6 +68,17 @@ function Round({ label, icon, onClick, tone = 'neutral', pressed, short }: { sho
 const Avatar = ({ name, size = 'h-8 w-8 text-sm' }: { name: string; size?: string }) => (
   <span aria-hidden className={`grid shrink-0 place-items-center rounded-full bg-accent/25 font-medium ${size}`}>{name.slice(0, 1).toUpperCase()}</span>
 )
+
+type Motion = 'slide' | 'turn' | 'spin' | 'pop'
+/** Button with an icon that moves on hover, so the action explains itself: arrows slide, plus turns, refresh spins. */
+function Btn({ icon, motion, spinning, className, children, ...rest }: { icon: IconName; motion?: Motion; spinning?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button {...rest} className={`group inline-flex items-center justify-center gap-2 ${className ?? ''}`}>
+      <span aria-hidden className={`ico ${motion ? `ico-${motion}` : ''} ${spinning ? 'ico-spinning' : ''}`}><Icon name={icon} size={16} /></span>
+      {children}
+    </button>
+  )
+}
 
 // ---- Shared ----------------------------------------------------------------------------------------
 
@@ -108,7 +126,7 @@ function Home() {
             <label className="text-xs text-muted">Nombre de la reunión
               <input className={`${field} mt-1`} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
             </label>
-            <button className={primary} type="submit">+ Crear reunión</button>
+            <Btn icon="plus" motion="turn" className={primary} type="submit">Crear reunión</Btn>
           </form>
           <ManualJoin onJoin={(ip, port) => start({ kind: 'join', ip, port, label: ip })} />
         </section>
@@ -116,7 +134,7 @@ function Home() {
         <section aria-label="Reuniones detectadas" className="rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-base font-semibold">Reuniones detectadas en tu red</h2>
-            <button className="text-sm text-accent disabled:text-muted" disabled={scanning} onClick={() => void C.scan()}>{scanning ? 'Buscando…' : 'Buscar ahora'}</button>
+            <Btn icon="refresh" motion="spin" spinning={scanning} className="rounded-lg px-2 py-1 text-sm text-accent hover:bg-accent/10 disabled:text-muted" disabled={scanning} onClick={() => void C.scan()}>{scanning ? 'Buscando…' : 'Buscar ahora'}</Btn>
           </div>
           {found.length === 0 && (
             <p className="text-sm text-muted">{scanning ? 'Buscando reuniones…' : 'No se detectaron reuniones. Si tu red está dividida en VLAN, usa «Unirse con IP y código».'}</p>
@@ -125,7 +143,7 @@ function Home() {
             {found.map((f) => (
               <li key={`${f.ip}:${f.port}`} className="flex items-center justify-between rounded-xl border border-transparent bg-line/50 px-4 py-3 transition-colors hover:border-accent/50">
                 <div className="min-w-0"><div className="truncate font-medium">{f.name}</div><div className="truncate text-xs text-muted">{f.host} · {f.ip} · {f.participants} {f.participants === 1 ? 'persona' : 'personas'}</div></div>
-                <button className={primary} onClick={() => start({ kind: 'join', ip: f.ip, port: f.port, label: f.name })}>Unirse</button>
+                <Btn icon="arrow" motion="slide" className={primary} onClick={() => start({ kind: 'join', ip: f.ip, port: f.port, label: f.name })}>Unirse</Btn>
               </li>
             ))}
           </ul>
@@ -134,7 +152,7 @@ function Home() {
       <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-surface/60 px-6 py-2.5 text-xs text-muted">
         <span>{net?.chosen ? <>Red: <b className="text-white">{net.chosen}</b>{net.ifaces.length > 1 && ` (${net.ifaces.length} adaptadores)`}</> : <span className="text-amber-300">Sin red detectada: conecta el cable Ethernet.</span>}</span>
         <span>Firewall: {net?.firewall === 'ok' ? <span className="text-ok">permitido</span> : net?.firewall === 'missing' ? <span className="text-amber-300">falta la regla</span> : 'sin verificar'}</span>
-        <button className="text-accent underline" onClick={() => setHelp(true)}>Ayuda de red y firewall</button>
+        <Btn icon="help" motion="pop" className="rounded-lg px-2 py-1 text-accent hover:bg-accent/10" onClick={() => setHelp(true)}>Ayuda de red y firewall</Btn>
         {net && !net.controllable && <span>Este equipo no admite ser controlado (solo Windows).</span>}
       </footer>
       {help && net && <NetworkHelp onClose={() => setHelp(false)} />}
@@ -158,7 +176,7 @@ function ManualJoin({ onJoin }: { onJoin: (ip: string, port: number) => void }) 
         <input className={`${field} mt-1`} value={addr} placeholder="192.168.10.24" inputMode="decimal" onChange={(e) => { setAddr(e.target.value); setErr('') }} aria-invalid={!!err} />
       </label>
       {err && <p role="alert" className="text-xs text-amber-300">{err}</p>}
-      <button className={quiet} type="submit">→ Continuar</button>
+      <Btn icon="arrow" motion="slide" className={quiet} type="submit">Continuar</Btn>
     </form>
   )
 }
@@ -200,8 +218,8 @@ function Prep() {
         )}
         {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" className={quiet} onClick={C.cancelPrep}>Cancelar</button>
-          <button type="submit" className={primary} disabled={!ok || busy}>{busy ? 'Entrando…' : intent.kind === 'host' ? 'Crear y entrar' : 'Entrar'}</button>
+          <Btn icon="x" motion="pop" type="button" className={quiet} onClick={C.cancelPrep}>Cancelar</Btn>
+          <Btn icon="arrow" motion="slide" type="submit" className={primary} disabled={!ok || busy}>{busy ? 'Entrando…' : intent.kind === 'host' ? 'Crear y entrar' : 'Entrar'}</Btn>
         </div>
       </form>
     </main>
@@ -250,8 +268,8 @@ function Room() {
               <div className="mb-1 font-medium">Controlando</div>
               {state.controls.map((c) => (
                 <div key={c.controller + c.target} className="flex items-center justify-between gap-2 py-0.5">
-                  <span className="truncate">{name(c.controller)} → {name(c.target)}</span>
-                  {(c.controller === me || c.target === me) && <button className="text-red-300 underline" onClick={() => C.revokeControl(c.controller === me ? c.target : c.controller)}>Detener</button>}
+                  <span className="flex min-w-0 items-center gap-1.5 truncate"><b className="truncate font-medium">{name(c.controller)}</b><span aria-label="controla a" className="ico-flow text-accent"><Icon name="arrow" size={14} /></span><b className="truncate font-medium">{name(c.target)}</b></span>
+                  {(c.controller === me || c.target === me) && <Btn icon="x" motion="pop" className="rounded-lg px-2 py-1 text-red-300 hover:bg-red-500/15" onClick={() => C.revokeControl(c.controller === me ? c.target : c.controller)}>Detener</Btn>}
                 </div>
               ))}
             </div>
@@ -278,7 +296,9 @@ function CopyChip({ label, value, mono, compact }: { label: string; value: strin
     <button onClick={copy} title={`Copiar ${label.toLowerCase()}: ${value}`} aria-label={`Copiar ${label.toLowerCase()} ${value}`}
       className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${done ? 'border-ok/60 bg-ok/10 text-ok' : 'border-line bg-line/60 hover:border-accent/60'}`}>
       {!compact && <><span className="text-muted">{label}</span><b className={mono ? 'font-mono tracking-wider' : ''}>{value}</b></>}
-      <span className="text-xs text-accent">{done ? '¡Copiado!' : compact ? 'Copiar todo' : 'Copiar'}</span>
+      <span className={`flex items-center gap-1 text-xs ${done ? '' : 'text-accent'}`}>
+        <span key={String(done)} aria-hidden className="anim-pop"><Icon name={done ? 'check' : 'copy'} size={14} /></span>{done ? '¡Copiado!' : compact ? 'Copiar todo' : 'Copiar'}
+      </span>
     </button>
   )
 }
@@ -381,7 +401,7 @@ function SourcePicker({ onClose }: { onClose: () => void }) {
           <span className="block text-xs text-muted">{canAudio ? 'Para que todos oigan el audio de un vídeo o una presentación.' : 'Solo disponible en Windows.'}</span>
         </span>
       </label>
-      <div className="mt-4 flex justify-end"><button className={quiet} onClick={onClose}>Cancelar</button></div>
+      <div className="mt-4 flex justify-end"><Btn icon="x" motion="pop" className={quiet} onClick={onClose}>Cancelar</Btn></div>
     </Modal>
   )
 }

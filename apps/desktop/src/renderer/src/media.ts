@@ -15,8 +15,15 @@ import type { SessionState } from '@mirror-studio/protocol'
  * below keep that affordable (measured on a 12-core dev PC: 35 viewers ~ 37% of one core, see HANDOFF.md),
  * but a lab PC must be measured too.
  */
-export const VIDEO_MAX_BITRATE = 2_500_000
-export const VIDEO_MAX_FPS = 15
+// Quality adapts to the audience: the host spends a fixed outbound budget, split among viewers. One viewer
+// (a remote-control session) gets up to 12 Mbps at 30 fps; a full 35-person room falls back to the old 2.5 Mbps / 15 fps.
+export const VIDEO_MIN_BITRATE = 2_500_000
+export const VIDEO_MAX_BITRATE = 12_000_000
+const VIDEO_BUDGET = 80_000_000 // bits/s of video the host may send in total: fits Gigabit, not 100 Mbps links
+export function videoLimits(viewers: number) {
+  const bitrate = Math.round(Math.min(VIDEO_MAX_BITRATE, Math.max(VIDEO_MIN_BITRATE, VIDEO_BUDGET / Math.max(1, viewers))))
+  return { bitrate, fps: viewers <= 8 ? 30 : 15 }
+}
 const ICE = { iceServers: [] as RTCIceServer[] } // LAN only: no STUN/TURN
 
 type Rtc = (kind: 'offer' | 'answer' | 'ice', data: string) => void
@@ -31,10 +38,13 @@ function addFour(pc: RTCPeerConnection) {
 }
 type Four = ReturnType<typeof addFour>
 
-async function capVideo(sender: RTCRtpSender) {
+async function capVideo(sender: RTCRtpSender, viewers = 1) {
   try {
+    const { bitrate, fps } = videoLimits(viewers)
     const p = sender.getParameters()
-    p.encodings = [{ ...(p.encodings?.[0] ?? {}), maxBitrate: VIDEO_MAX_BITRATE, maxFramerate: VIDEO_MAX_FPS }]
+    // maintain-resolution: for text and UI a lower frame rate is better than a blurry picture.
+    p.degradationPreference = 'maintain-resolution'
+    p.encodings = [{ ...(p.encodings?.[0] ?? {}), maxBitrate: bitrate, maxFramerate: fps, scaleResolutionDownBy: 1 }]
     await sender.setParameters(p)
   } catch { /* encoder defaults still work */ }
 }
@@ -42,7 +52,7 @@ async function capVideo(sender: RTCRtpSender) {
 /** `sourceId` null = primary screen. With `audio`, also captures the PC's sound (Windows loopback). */
 export async function captureScreen(sourceId: string | null, hint: 'detail' | 'motion', audio = false): Promise<MediaStream> {
   await window.studio.pickSource(sourceId, audio)
-  const s = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: VIDEO_MAX_FPS, width: { max: 1920 }, height: { max: 1080 } }, audio })
+  const s = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 30 }, width: { max: 2560 }, height: { max: 1440 } }, audio })
   s.getVideoTracks()[0].contentHint = hint
   return s
 }
@@ -141,7 +151,7 @@ export class Hub {
     const ts = pc.getTransceivers()
     l.t = { audio: ts[0], present: ts[1], control: ts[2], screen: ts[3] }
     l.t.audio.direction = 'sendrecv'; l.t.present.direction = 'sendonly'; l.t.control.direction = 'sendonly'; l.t.screen.direction = 'recvonly'
-    await capVideo(l.t.present.sender); await capVideo(l.t.control.sender)
+    await this.tune()
     for (const c of l.pending.splice(0)) await pc.addIceCandidate(c).catch(() => {})
     await pc.setLocalDescription(await pc.createAnswer())
     this.send(id, 'answer', pc.localDescription!.sdp)
@@ -153,7 +163,14 @@ export class Hub {
     this.state = state
     const present = new Set(state.participants.map((p) => p.id))
     for (const [id, l] of this.links) if (!present.has(id)) { l.pc.close(); this.links.delete(id) }
+    void this.tune()
     this.route()
+  }
+
+  /** Re-splits the bitrate budget whenever the number of viewers changes. */
+  private async tune() {
+    const n = this.links.size
+    for (const l of this.links.values()) if (l.t) await Promise.all([capVideo(l.t.present.sender, n), capVideo(l.t.control.sender, n)])
   }
 
   private screenOf(id: string) { return id === this.me ? this.localScreen : this.links.get(id)?.screen ?? null }

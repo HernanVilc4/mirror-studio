@@ -103,16 +103,18 @@ public static class MS {
   [StructLayout(LayoutKind.Explicit)] public struct U { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
   [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public U u; }
   [DllImport("user32.dll", SetLastError=true)] static extern uint SendInput(uint n, INPUT[] i, int size);
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   static void Send(INPUT i) { SendInput(1, new INPUT[]{ i }, Marshal.SizeOf(typeof(INPUT))); }
   public static void Mouse(int dx, int dy, uint data, uint flags) { var i = new INPUT(); i.type = 0; i.u.mi.dx = dx; i.u.mi.dy = dy; i.u.mi.mouseData = data; i.u.mi.dwFlags = flags; Send(i); }
   public static void Key(ushort vk, ushort scan, uint flags) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = scan; i.u.ki.dwFlags = flags; Send(i); }
 }
 "@
+[void][MS]::SetProcessDPIAware()  # without it, scaled displays get virtualized coordinates
 while (($line = [Console]::In.ReadLine()) -ne $null) {
   $p = $line.Split(' ')
   switch ($p[0]) {
     'M' { [MS]::Mouse([int]$p[1], [int]$p[2], 0, 0x8001) }                       # MOVE | ABSOLUTE (0..65535)
-    'B' { [MS]::Mouse(0, 0, 0, [uint32]$p[1]) }                                  # button flags computed by the host
+    'B' { $f = [uint32]$p[1]; if (($f -band 0x2a) -ne 0) { Start-Sleep -Milliseconds 25 }; [MS]::Mouse(0, 0, 0, $f) }  # a press waits so the window sees the hover first (title-bar buttons need it)
     'W' { if ([int]$p[2] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[2]), 0x0800) }; if ([int]$p[1] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[1]), 0x1000) } }
     'K' { [MS]::Key([uint16]$p[1], 0, [uint32]$p[2]) }                           # flags: 1 = extended, 2 = key up
     'T' { foreach ($c in [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[1])).ToCharArray()) { [MS]::Key(0, [uint16]$c, 4); [MS]::Key(0, [uint16]$c, 6) } }
