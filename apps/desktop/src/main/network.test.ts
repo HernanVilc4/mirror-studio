@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { listInterfaces, pickInterface, subnetHosts, scanLan, firewallCommand, type NetworkInterfaces } from './network'
+import { listInterfaces, pickInterface, subnetHosts, scanLan, firewallCommand, parseFirewall, type NetworkInterfaces } from './network'
 import { MeetingHost } from './meeting'
 import { MeetingServer } from './meeting-net'
 
@@ -59,4 +59,15 @@ describe('firewall command', () => {
     expect(c).toContain('profile=private,domain')
     expect(c).not.toContain('public')
   })
+})
+
+describe('firewall rule detection', () => {
+  // Spanish Windows 11, port-based rule, as netsh prints it (accents may arrive mangled by the OEM code page).
+  const es = 'Nombre de regla:   Mirror Studio\r\n------\r\nHabilitada:   Sí\r\nDirección:   Dentro\r\nProtocolo:   TCP\r\nLocalPort:   47800\r\nAcción:   Permitir\r\n'
+  const exe = 'C:/x/app.exe'
+  it('accepts a Spanish port rule', () => expect(parseFirewall(es, exe, 47800)).toBe('ok'))
+  it('accepts it with mangled accents', () => expect(parseFirewall(es.replace('Sí', 'S\uFFFD').replace('Acción', 'Acci\uFFFDn'), exe, 47800)).toBe('ok'))
+  it('ignores a rule for another port', () => expect(parseFirewall(es.replace('47800', '47801'), exe, 47800)).toBe('missing'))
+  it('rejects a disabled rule', () => expect(parseFirewall(es.replace('Sí', 'No'), exe, 47800)).toBe('missing'))
+  it('accepts an English program rule', () => expect(parseFirewall(`Enabled: Yes\nProgram: ${exe}\nAction: Allow\n`, exe, 47800)).toBe('ok'))
 })

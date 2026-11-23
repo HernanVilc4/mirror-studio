@@ -4,7 +4,7 @@ import {
   type ControlInput, type Participant, type Role
 } from '@mirror-studio/protocol'
 import type { CaptureSource } from '../../preload'
-import { useUi, selfOf, type Intent } from './store'
+import { useUi, selfOf, notify, type Intent } from './store'
 import * as C from './controller'
 
 const ROLE_LABEL: Record<Role, string> = { creator: 'Creador', admin: 'Administrador', teacher: 'Docente', participant: 'Participante' }
@@ -25,6 +25,7 @@ function Main() {
   useEffect(() => { C.init(); return C.dispose }, [])
   return (
     <div className="flex h-full flex-col">
+      <TitleBar />
       <Notices />
       {phase === 'home' && <Home />}
       {phase === 'prep' && <Prep />}
@@ -36,7 +37,7 @@ function Main() {
 
 // ---- Icons and round controls (Meet-style: icon only, name in tooltip and aria-label) ------------------
 
-type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop' | 'plus' | 'arrow' | 'refresh' | 'copy' | 'check' | 'help' | 'x'
+type IconName = 'present' | 'cursor' | 'leave' | 'more' | 'stop' | 'plus' | 'arrow' | 'refresh' | 'copy' | 'check' | 'help' | 'x' | 'users' | 'expand' | 'shrink' | 'eye' | 'eye-off' | 'link' | 'network' | 'shield' | 'login'
 const PATHS: Record<IconName, React.ReactNode> = {
   'present': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4M12 13V8M9.5 10.5L12 8l2.5 2.5" /></>,
   'stop': <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /><rect x="9" y="7" width="6" height="6" rx="1" /></>,
@@ -49,6 +50,15 @@ const PATHS: Record<IconName, React.ReactNode> = {
   'check': <path d="M5 12.5l4.5 4.5L19 7.5" />,
   'help': <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.2 1-1.2 1.8M12 17h.01" /></>,
   'x': <path d="M6 6l12 12M18 6L6 18" />,
+  'network': <><rect x="9" y="3" width="6" height="5" rx="1" /><rect x="3" y="16" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M12 8v4M6 16v-2h12v2" /></>,
+  'shield': <><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" /><path d="M9 12l2 2 4-4" /></>,
+  'login': <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4" />,
+  'users': <><circle cx="9" cy="8" r="3.2" /><path d="M3 19c.8-3.2 3.2-5 6-5s5.2 1.8 6 5" /><circle cx="17" cy="9" r="2.4" /><path d="M16.5 14.2c2.3.2 4 1.8 4.5 4.8" /></>,
+  'expand': <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  'shrink': <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />,
+  'eye': <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  'eye-off': <path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.2 6.2A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.8-1.8M9.9 9.9a3 3 0 0 0 4.2 4.2" />,
+  'link': <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />,
   'more': <><circle cx="12" cy="5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="12" cy="19" r="1.2" /></>
 }
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
@@ -82,6 +92,57 @@ function Btn({ icon, motion, spinning, className, children, ...rest }: { icon: I
 
 // ---- Shared ----------------------------------------------------------------------------------------
 
+/** The app mark: a screen being mirrored. `animate` draws it in (home screen entrance). */
+function Logo({ size = 24, animate }: { size?: number; animate?: boolean }) {
+  return (
+    <span aria-hidden className={`${animate ? 'logo-in' : ''} grid shrink-0 place-items-center rounded-[28%] bg-gradient-to-br from-accent to-[#7c5cff] text-white shadow-lg shadow-accent/30`} style={{ width: size, height: size }}>
+      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect className="draw" pathLength={1} x="3" y="4" width="18" height="12" rx="2" />
+        <path className="draw d2" pathLength={1} d="M8 20h8M12 16v4" />
+        <path className="draw d3" pathLength={1} d="M9 10.5L12 7.5l3 3M12 7.5v5.5" />
+      </svg>
+    </span>
+  )
+}
+
+/** Replaces the OS title bar: the OS keeps only its minimize/maximize/close buttons on the right (titleBarOverlay). */
+function TitleBar() {
+  const { phase, state } = useUi()
+  return (
+    <div className="drag flex h-10 shrink-0 items-center gap-2 border-b border-line/60 bg-[#0d0f13] pl-3 pr-[150px] text-xs">
+      <Logo size={20} />
+      <span className="font-semibold tracking-tight">Mirror Studio</span>
+      {phase === 'room' && state && <span className="truncate text-muted">· {state.name}</span>}
+    </div>
+  )
+}
+
+/** Small round button over video: icon only, the name is in the tooltip and for screen readers. */
+function IconBtn({ icon, label, onClick, tone = 'glass', motion = 'pop' }: { icon: IconName; label: string; onClick: () => void; tone?: 'glass' | 'danger'; motion?: Motion }) {
+  return (
+    <button aria-label={label} title={label} onClick={onClick}
+      className={`group grid h-9 w-9 place-items-center rounded-full backdrop-blur transition-colors focus-visible:outline-2 focus-visible:outline-accent ${tone === 'danger' ? 'bg-red-600/90 text-white hover:bg-red-500' : 'bg-black/55 text-white hover:bg-black/80'}`}>
+      <span aria-hidden className={`ico ico-${motion}`}><Icon name={icon} size={18} /></span>
+    </button>
+  )
+}
+
+/** Fullscreen for one element (the stage), not the whole window, like Meet. */
+function useFullscreen<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const f = () => setOn(!!ref.current && document.fullscreenElement === ref.current)
+    document.addEventListener('fullscreenchange', f)
+    return () => document.removeEventListener('fullscreenchange', f)
+  }, [])
+  const toggle = () => {
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void ref.current?.requestFullscreen().catch(() => notify('No se pudo pasar a pantalla completa.'))
+  }
+  return { ref, on, toggle }
+}
+
 function Notices() {
   const notices = useUi((s) => s.notices)
   return (
@@ -111,53 +172,105 @@ function Home() {
   const [name, setName] = useState('')
   const [help, setHelp] = useState(false)
   const start = (i: Intent) => C.openPrep(i)
+  const fw = net?.firewall
   return (
-    <>
-      <header className="flex items-center justify-between border-b border-line bg-surface/60 px-6 py-3.5 backdrop-blur">
-        <h1 className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"><span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-white"><Icon name="present" size={18} /></span>Mirror Studio</h1>
-        <label className="flex items-center gap-2 whitespace-nowrap text-sm text-muted">Mi nombre
-          <input className={`${field} w-44`} value={myName} maxLength={64} onChange={(e) => set({ myName: e.target.value })} />
-        </label>
-      </header>
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-auto p-6">
-        <section className="grid gap-4 sm:grid-cols-2" aria-label="Crear o unirse">
-          <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20" onSubmit={(e) => { e.preventDefault(); start({ kind: 'host', meetingName: name.trim() || `Reunión de ${myName}` }) }}>
-            <h2 className="text-base font-semibold">Crear reunión</h2>
-            <label className="text-xs text-muted">Nombre de la reunión
-              <input className={`${field} mt-1`} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
-            </label>
-            <Btn icon="plus" motion="turn" className={primary} type="submit">Crear reunión</Btn>
-          </form>
-          <ManualJoin onJoin={(ip, port) => start({ kind: 'join', ip, port, label: ip })} />
-        </section>
+    <div className="home-bg relative flex min-h-0 flex-1 flex-col">
+      <main className="flex flex-1 flex-col items-center overflow-auto px-6 pb-8">
+        <header className="flex flex-col items-center gap-3 pb-6 pt-10 text-center">
+          <div className="relative grid place-items-center"><span aria-hidden className="hero-glow" /><Logo size={80} animate /></div>
+          <h1 className="anim-rise title-gradient mt-2 text-4xl font-bold tracking-tight" style={{ animationDelay: '.3s' }}>Mirror Studio</h1>
+          <p className="anim-rise text-sm text-muted" style={{ animationDelay: '.4s' }}>Presenta tu pantalla y controla PCs de tu red local, sin Internet.</p>
+          <label className="anim-rise group mt-2 flex items-center gap-2 rounded-full border border-line bg-surface/80 py-1 pl-1 pr-4 shadow-lg shadow-black/20 transition-colors focus-within:border-accent" style={{ animationDelay: '.5s' }}>
+            <Avatar name={myName || '?'} size="h-8 w-8 text-sm" />
+            <span className="text-xs text-muted">Te verán como</span>
+            <input aria-label="Mi nombre" className="w-44 bg-transparent text-sm font-medium outline-none" value={myName} maxLength={64} onChange={(e) => set({ myName: e.target.value })} />
+          </label>
+        </header>
 
-        <section aria-label="Reuniones detectadas" className="rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-base font-semibold">Reuniones detectadas en tu red</h2>
-            <Btn icon="refresh" motion="spin" spinning={scanning} className="rounded-lg px-2 py-1 text-sm text-accent hover:bg-accent/10 disabled:text-muted" disabled={scanning} onClick={() => void C.scan()}>{scanning ? 'Buscando…' : 'Buscar ahora'}</Btn>
-          </div>
-          {found.length === 0 && (
-            <p className="text-sm text-muted">{scanning ? 'Buscando reuniones…' : 'No se detectaron reuniones. Si tu red está dividida en VLAN, usa «Unirse con IP y código».'}</p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {found.map((f) => (
-              <li key={`${f.ip}:${f.port}`} className="flex items-center justify-between rounded-xl border border-transparent bg-line/50 px-4 py-3 transition-colors hover:border-accent/50">
-                <div className="min-w-0"><div className="truncate font-medium">{f.name}</div><div className="truncate text-xs text-muted">{f.host} · {f.ip} · {f.participants} {f.participants === 1 ? 'persona' : 'personas'}</div></div>
-                <Btn icon="arrow" motion="slide" className={primary} onClick={() => start({ kind: 'join', ip: f.ip, port: f.port, label: f.name })}>Unirse</Btn>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="flex w-full max-w-3xl flex-col gap-5">
+          <section className="grid gap-5 sm:grid-cols-2" aria-label="Crear o unirse">
+            <form className="card anim-rise flex flex-col gap-3 p-5" style={{ animationDelay: '.55s' }}
+              onSubmit={(e) => { e.preventDefault(); start({ kind: 'host', meetingName: name.trim() || `Reunión de ${myName}` }) }}>
+              <CardHead icon="plus" title="Crear reunión" hint="Serás el anfitrión: otros se unen con tu IP y código." />
+              <input aria-label="Nombre de la reunión" className={field} value={name} maxLength={64} placeholder={`Reunión de ${myName || 'mí'}`} onChange={(e) => setName(e.target.value)} />
+              <Btn icon="plus" motion="turn" className={`${primary} mt-auto`} type="submit">Crear reunión</Btn>
+            </form>
+            <ManualJoin onJoin={(ip, port) => start({ kind: 'join', ip, port, label: ip })} />
+          </section>
+
+          <section aria-label="Reuniones detectadas" className="card anim-rise p-5" style={{ animationDelay: '.65s' }}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-accent/15 text-accent">
+                  {scanning && <span aria-hidden className="radar rounded-xl" />}
+                  <Icon name="network" size={18} />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold">Reuniones en tu red</h2>
+                  <p className="text-xs text-muted">{scanning ? 'Buscando…' : found.length ? `${found.length} ${found.length === 1 ? 'reunión encontrada' : 'reuniones encontradas'}` : 'Se busca sola cada pocos segundos'}</p>
+                </div>
+              </div>
+              <IconBtn icon="refresh" motion="spin" label="Buscar ahora" onClick={() => void C.scan()} />
+            </div>
+            {found.length === 0 ? (
+              <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-line px-4 py-6 text-center">
+                <p className="text-sm text-muted">{scanning ? 'Buscando reuniones…' : 'Aún no hay reuniones abiertas en esta red.'}</p>
+                {!scanning && <p className="max-w-md text-xs text-muted/80">Si las PCs están en redes separadas (VLAN), únete con la IP y el código.</p>}
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {found.map((f, n) => (
+                  <li key={`${f.ip}:${f.port}`} className="meeting-row anim-rise flex items-center gap-3 rounded-xl border border-line/60 bg-line/40 px-3 py-2.5" style={{ animationDelay: `${n * 60}ms` }}>
+                    <span className="relative"><Avatar name={f.host} size="h-10 w-10 text-base" /><span aria-hidden className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-ok" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{f.name}</div>
+                      <div className="flex items-center gap-2 truncate text-xs text-muted">
+                        <span>{f.host}</span><span className="rounded-md bg-bg/70 px-1.5 py-0.5 font-mono">{f.ip}</span>
+                        <span className="inline-flex items-center gap-1"><Icon name="users" size={12} />{f.participants}</span>
+                      </div>
+                    </div>
+                    <Btn icon="login" motion="slide" className={primary} onClick={() => start({ kind: 'join', ip: f.ip, port: f.port, label: f.name })}>Unirse</Btn>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </main>
-      <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-surface/60 px-6 py-2.5 text-xs text-muted">
-        <span>{net?.chosen ? <>Red: <b className="text-white">{net.chosen}</b>{net.ifaces.length > 1 && ` (${net.ifaces.length} adaptadores)`}</> : <span className="text-amber-300">Sin red detectada: conecta el cable Ethernet.</span>}</span>
-        <span>Firewall: {net?.firewall === 'ok' ? <span className="text-ok">permitido</span> : net?.firewall === 'missing' ? <span className="text-amber-300">falta la regla</span> : 'sin verificar'}</span>
-        <Btn icon="help" motion="pop" className="rounded-lg px-2 py-1 text-accent hover:bg-accent/10" onClick={() => setHelp(true)}>Ayuda de red y firewall</Btn>
-        {net && !net.controllable && <span>Este equipo no admite ser controlado (solo Windows).</span>}
+
+      <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-[#0d0f13]/90 px-5 py-2 text-xs backdrop-blur">
+        <StatusPill tone={net?.chosen ? 'ok' : 'warn'} icon="network">
+          {net?.chosen ? <>Red <b className="font-mono text-white">{net.chosen}</b>{net.ifaces.length > 1 && <span className="text-muted"> · {net.ifaces.length} adaptadores</span>}</> : 'Sin red: conecta el cable Ethernet'}
+        </StatusPill>
+        <StatusPill tone={fw === 'ok' ? 'ok' : fw === 'missing' ? 'warn' : 'idle'} icon="shield" onClick={fw === 'ok' ? undefined : () => setHelp(true)}>
+          Firewall {fw === 'ok' ? 'permitido' : fw === 'missing' ? 'bloqueado: ver cómo abrirlo' : 'sin verificar'}
+        </StatusPill>
+        {net && !net.controllable && <StatusPill tone="idle" icon="cursor">No admite ser controlado (solo Windows)</StatusPill>}
+        <span className="flex-1" />
+        <Btn icon="help" motion="pop" className="rounded-full px-3 py-1.5 text-accent hover:bg-accent/10" onClick={() => setHelp(true)}>Ayuda de red</Btn>
       </footer>
       {help && net && <NetworkHelp onClose={() => setHelp(false)} />}
-    </>
+    </div>
   )
+}
+
+function CardHead({ icon, title, hint }: { icon: IconName; title: string; hint: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent/30 to-[#7c5cff]/30 text-white ring-1 ring-white/10"><Icon name={icon} size={20} /></span>
+      <div><h2 className="text-base font-semibold">{title}</h2><p className="text-xs text-muted">{hint}</p></div>
+    </div>
+  )
+}
+
+/** One status in the footer: a colored dot says ok / needs attention at a glance. */
+function StatusPill({ tone, icon, onClick, children }: { tone: 'ok' | 'warn' | 'idle'; icon: IconName; onClick?: () => void; children: React.ReactNode }) {
+  const dot = tone === 'ok' ? 'bg-ok' : tone === 'warn' ? 'bg-amber-400 animate-pulse' : 'bg-muted'
+  const cls = `flex items-center gap-2 rounded-full border px-3 py-1.5 ${tone === 'warn' ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-line bg-surface/70 text-muted'}`
+  const body = <><span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} /><Icon name={icon} size={14} /><span>{children}</span></>
+  return onClick
+    ? <button className={`${cls} transition-colors hover:border-amber-400/70 focus-visible:outline-2 focus-visible:outline-accent`} onClick={onClick}>{body}</button>
+    : <span className={cls}>{body}</span>
 }
 
 function ManualJoin({ onJoin }: { onJoin: (ip: string, port: number) => void }) {
@@ -170,13 +283,11 @@ function ManualJoin({ onJoin }: { onJoin: (ip: string, port: number) => void }) 
     onJoin(m[1], m[2] ? Number(m[2]) : 47800)
   }
   return (
-    <form className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-lg shadow-black/20" onSubmit={submit}>
-      <h2 className="text-base font-semibold">Unirse con IP y código</h2>
-      <label className="text-xs text-muted">IP del anfitrión
-        <input className={`${field} mt-1`} value={addr} placeholder="192.168.10.24" inputMode="decimal" onChange={(e) => { setAddr(e.target.value); setErr('') }} aria-invalid={!!err} />
-      </label>
+    <form className="card anim-rise flex flex-col gap-3 p-5" style={{ animationDelay: '.6s' }} onSubmit={submit}>
+      <CardHead icon="login" title="Unirse con IP y código" hint="Pide al anfitrión su IP; el código va en el paso siguiente." />
+      <input aria-label="IP del anfitrión" className={`${field} font-mono`} value={addr} placeholder="192.168.10.24" inputMode="decimal" onChange={(e) => { setAddr(e.target.value); setErr('') }} aria-invalid={!!err} />
       {err && <p role="alert" className="text-xs text-amber-300">{err}</p>}
-      <Btn icon="arrow" motion="slide" className={quiet} type="submit">Continuar</Btn>
+      <Btn icon="arrow" motion="slide" className={`${quiet} mt-auto`} type="submit">Continuar</Btn>
     </form>
   )
 }
@@ -229,9 +340,10 @@ function Prep() {
 // ---- Room ------------------------------------------------------------------------------------------
 
 function Room() {
-  const { state, me, hostInfo, presentation, controlView, sharing, rtt, net } = useUi()
+  const { state, me, hostInfo, presentation, controlView, sharing, rtt, localPreview } = useUi()
   const self = selfOf(useUi.getState())
   const [picker, setPicker] = useState(false)
+  const [side, setSide] = useState(true)
   if (!state || !self) return null
   const controlling = state.controls.find((c) => c.controller === me)
   const controlled = state.controls.find((c) => c.target === me)
@@ -242,13 +354,20 @@ function Room() {
     <>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-2 text-sm">
         <div className="min-w-0"><span className="font-semibold">{state.name}</span><span className="ml-3 text-muted">{state.participants.length} {state.participants.length === 1 ? 'persona' : 'personas'}{rtt !== undefined && ` · ${rtt.toFixed(0)} ms`}</span></div>
-        {hostInfo && (
-          <div className="flex items-center gap-2" aria-label="Datos para unirse">
-            <CopyChip label="IP" value={hostInfo.ip ?? hostInfo.ips[0] ?? '?'} />
-            <CopyChip label="Código" value={formatCode(hostInfo.code)} mono />
-            <CopyChip label="Todo" value={`${hostInfo.ip ?? hostInfo.ips[0] ?? ''} ${formatCode(hostInfo.code)}`} compact />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {hostInfo && (
+            <div className="flex items-center gap-2" aria-label="Datos para unirse">
+              <CopyChip label="IP" value={hostInfo.ip ?? hostInfo.ips[0] ?? '?'} />
+              <CopyChip label="Código" value={formatCode(hostInfo.code)} mono />
+              <CopyButton what="IP y código" text={`${hostInfo.ip ?? hostInfo.ips[0] ?? ''} ${formatCode(hostInfo.code)}`} icon="link" boxed />
+            </div>
+          )}
+          <button aria-label={side ? 'Ocultar participantes' : 'Mostrar participantes'} title={side ? 'Ocultar participantes' : 'Mostrar participantes'} aria-expanded={side} onClick={() => setSide(!side)}
+            className={`group relative grid h-9 w-9 place-items-center rounded-xl border transition-colors focus-visible:outline-2 focus-visible:outline-accent ${side ? 'border-accent/50 bg-accent/15 text-accent' : 'border-line bg-line/60 hover:border-accent/50'}`}>
+            <span aria-hidden className="ico ico-pop"><Icon name="users" size={18} /></span>
+            <span aria-hidden className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{state.participants.length}</span>
+          </button>
+        </div>
       </header>
       {controlled && <div role="alert" className="bg-red-900/60 px-5 py-2 text-sm">{name(controlled.controller)} controla este equipo.</div>}
       <div className="flex min-h-0 flex-1">
@@ -256,11 +375,11 @@ function Room() {
           {controlling && controlView ? <ControlView target={controlling.target} stream={controlView} name={name(controlling.target)} />
             : controlling ? <Placeholder text={`Esperando la pantalla de ${name(controlling.target)}…`} />
             : presentation && presenter ? <Stage stream={presentation} caption={`${presenter.name} presenta`} />
-            : isPresenter ? <Placeholder text="Estás presentando tu pantalla. Nadie ve esto hasta que otros se unan." />
+            : isPresenter ? <SelfPresenting stream={localPreview} />
             : presenter ? <Placeholder text={`Esperando la pantalla de ${presenter.name}…`} />
             : <Grid people={state.participants} />}
         </section>
-        <aside className="w-80 shrink-0 overflow-auto border-l border-line bg-surface/40 p-3" aria-label="Participantes">
+        <aside hidden={!side} className="side-in w-80 shrink-0 overflow-auto border-l border-line bg-surface/40 p-3" aria-label="Participantes">
           <h2 className="mb-2 px-1 text-sm font-medium text-muted">Participantes</h2>
           <ul className="flex flex-col gap-1">{state.participants.map((p) => <Row key={p.id} p={p} self={self} controlled={state.controls.some((c) => c.target === p.id)} presenting={state.presenter === p.id} />)}</ul>
           {state.controls.length > 0 && (
@@ -288,18 +407,45 @@ function Room() {
   )
 }
 
-/** One value with its own copy button: the IP and the code are usually typed on another PC, one at a time. */
-function CopyChip({ label, value, mono, compact }: { label: string; value: string; mono?: boolean; compact?: boolean }) {
+/** Copies `text`. No words: the copy glyph says it, then a check pops in with a ring burst. */
+function CopyButton({ what, text, icon = 'copy', boxed }: { what: string; text: string; icon?: IconName; boxed?: boolean }) {
   const [done, setDone] = useState(false)
-  const copy = () => { void navigator.clipboard.writeText(value).then(() => { setDone(true); setTimeout(() => setDone(false), 1500) }) }
+  const copy = () => {
+    navigator.clipboard.writeText(text)
+      .then(() => { setDone(true); setTimeout(() => setDone(false), 1400) })
+      .catch(() => notify('No se pudo copiar al portapapeles.'))
+  }
   return (
-    <button onClick={copy} title={`Copiar ${label.toLowerCase()}: ${value}`} aria-label={`Copiar ${label.toLowerCase()} ${value}`}
-      className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${done ? 'border-ok/60 bg-ok/10 text-ok' : 'border-line bg-line/60 hover:border-accent/60'}`}>
-      {!compact && <><span className="text-muted">{label}</span><b className={mono ? 'font-mono tracking-wider' : ''}>{value}</b></>}
-      <span className={`flex items-center gap-1 text-xs ${done ? '' : 'text-accent'}`}>
-        <span key={String(done)} aria-hidden className="anim-pop"><Icon name={done ? 'check' : 'copy'} size={14} /></span>{done ? '¡Copiado!' : compact ? 'Copiar todo' : 'Copiar'}
-      </span>
+    <button onClick={copy} aria-label={done ? `${what} copiado` : `Copiar ${what}`} title={done ? '¡Copiado!' : `Copiar ${what}`}
+      className={`group relative grid place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-accent ${boxed ? 'h-9 w-9 rounded-xl border' : 'h-8 w-8 rounded-lg'} ${done ? 'border-ok/60 bg-ok/20 text-ok' : boxed ? 'border-line bg-line/60 text-accent hover:border-accent/60' : 'text-accent hover:bg-accent/15'}`}>
+      <span key={String(done)} aria-hidden className={done ? 'anim-check' : 'ico ico-copy'}><Icon name={done ? 'check' : icon} size={16} /></span>
+      {done && <span aria-hidden className="burst" />}
     </button>
+  )
+}
+/** A value people type on another PC (IP, code), with its own copy button. */
+function CopyChip({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-line bg-line/60 py-0.5 pl-3 pr-0.5 text-sm">
+      <span className="text-muted">{label}</span><b className={mono ? 'font-mono tracking-wider' : ''}>{value}</b>
+      <CopyButton what={label} text={value} />
+    </div>
+  )
+}
+/** What I am presenting, shown back to me, with Meet's "mirror" switch: sharing this very window makes an infinite mirror. */
+function SelfPresenting({ stream }: { stream: MediaStream | null }) {
+  const [mirror, setMirror] = useState(() => { try { return localStorage.getItem('mirror') !== 'off' } catch { return true } })
+  const toggle = (on: boolean) => { setMirror(on); try { localStorage.setItem('mirror', on ? 'on' : 'off') } catch { /* storage blocked */ } }
+  if (stream && mirror) return <Stage stream={stream} caption="Así ven los demás tu presentación." live mirror={{ on: true, toggle: () => toggle(false) }} />
+  return (
+    <div className="grid flex-1 place-items-center rounded-2xl border border-dashed border-line">
+      <div className="anim-rise flex flex-col items-center gap-3 text-center">
+        <span className="live-dot" aria-hidden />
+        <p className="text-base font-medium">Estás presentando</p>
+        <p className="max-w-sm text-sm text-muted">Ocultaste tu propia vista para evitar el efecto de espejo infinito. Los demás siguen viendo tu pantalla.</p>
+        {stream && <Btn icon="eye" motion="pop" className={quiet} onClick={() => toggle(true)}>Ver lo que presento</Btn>}
+      </div>
+    </div>
   )
 }
 function Placeholder({ text }: { text: string }) {
@@ -318,13 +464,20 @@ function Grid({ people }: { people: Participant[] }) {
     </div>
   )
 }
-function Stage({ stream, caption }: { stream: MediaStream; caption: string }) {
+function Stage({ stream, caption, mirror, live }: { stream: MediaStream; caption: string; mirror?: { on: boolean; toggle: () => void }; live?: boolean }) {
   const v = useRef<HTMLVideoElement>(null)
+  const fs = useFullscreen<HTMLDivElement>()
   useEffect(() => { if (v.current) v.current.srcObject = stream }, [stream])
   return (
     <figure className="flex min-h-0 flex-1 flex-col gap-2">
-      <video ref={v} autoPlay muted playsInline className="min-h-0 w-full flex-1 rounded-xl bg-black object-contain shadow-2xl ring-1 ring-line" />
-      <figcaption className="text-xs text-muted">{caption}</figcaption>
+      <div ref={fs.ref} className="group/stage relative flex min-h-0 flex-1 overflow-hidden rounded-xl bg-black shadow-2xl ring-1 ring-line">
+        <video ref={v} autoPlay muted playsInline className="h-full w-full object-contain" />
+        <div className="absolute right-3 top-3 flex gap-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover/stage:opacity-100">
+          {mirror && <IconBtn icon="eye-off" label="Ocultar mi vista (evita el espejo infinito)" onClick={mirror.toggle} />}
+          <IconBtn icon={fs.on ? 'shrink' : 'expand'} label={fs.on ? 'Salir de pantalla completa' : 'Pantalla completa'} onClick={fs.toggle} />
+        </div>
+      </div>
+      <figcaption className="flex items-center gap-2 text-xs text-muted">{live && <span className="live-dot small" aria-hidden />}{caption}</figcaption>
     </figure>
   )
 }
@@ -428,8 +581,16 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
     return mapPointToVideo(e.clientX, e.clientY, { x: r.x, y: r.y, w: r.width, h: r.height }, el.videoWidth, el.videoHeight)
   }
   const btnOf = (b: number) => (b === 2 ? 'right' : b === 1 ? 'middle' : 'left') as 'left' | 'right' | 'middle'
+  const fs = useFullscreen<HTMLDivElement>()
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div ref={fs.ref} className="relative flex min-h-0 flex-1 flex-col">
+      {/* Outside the key-capturing area: this PC's own app stays usable while controlling the other one. */}
+      <div className="anim-rise absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/70 py-1 pl-4 pr-1 text-xs text-white opacity-80 shadow-xl backdrop-blur transition-opacity hover:opacity-100">
+        <span className="live-dot small" aria-hidden />Controlando <b>{name}</b>
+        <IconBtn icon={fs.on ? 'shrink' : 'expand'} label={fs.on ? 'Salir de pantalla completa' : 'Pantalla completa'} onClick={fs.toggle} />
+        <IconBtn icon="x" tone="danger" label="Dejar de controlar" onClick={() => C.revokeControl(target)} />
+      </div>
       <div ref={wrap} tabIndex={0} aria-label={`Controlando la PC de ${name}. Presiona Ctrl+Alt+Esc en esa PC para detener.`}
         className="min-h-0 flex-1 cursor-crosshair rounded-xl bg-black outline-2 outline-accent focus:outline"
         onBlur={releaseAll}
@@ -442,6 +603,7 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
           onPointerUp={(e) => { const p = point(e); if (p) emit({ t: 'mouse-move', ...p }); buttons.current.delete(btnOf(e.button)); emit({ t: 'mouse-button', button: btnOf(e.button), down: false }) }}
           onPointerCancel={releaseAll}
           onWheel={(e) => emit({ t: 'wheel', dx: Math.round(e.deltaX), dy: Math.round(e.deltaY) })} />
+      </div>
       </div>
       <p className="text-xs text-muted">Controlas la PC de {name}. Haz clic en la imagen para escribir. Esa persona puede detenerlo en cualquier momento.</p>
     </div>

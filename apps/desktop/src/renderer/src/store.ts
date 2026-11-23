@@ -23,6 +23,8 @@ export interface Ui {
   presentation: MediaStream | null
   controlView: MediaStream | null
   sharing: boolean
+  /** My own presentation, to show it back to me (the "mirror"). Null while not presenting. */
+  localPreview: MediaStream | null
   rtt?: number
   set: (p: Partial<Ui>) => void
 }
@@ -31,7 +33,7 @@ let n = 0
 export const useUi = create<Ui>((set) => ({
   phase: 'home', intent: null, myName: '', busy: false, error: '',
   net: null, found: [], scanning: false, hostInfo: null, state: null, me: '', notices: [], asks: [],
-  presentation: null, controlView: null, sharing: false,
+  presentation: null, controlView: null, sharing: false, localPreview: null,
   set: (p) => set(p)
 }))
 

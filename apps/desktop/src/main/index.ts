@@ -55,7 +55,10 @@ const SYSTEM_AUDIO = process.platform === 'win32' || process.env.MS_TEST_AUDIO =
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null) // no File/Edit/View bar: this is a call window, not a document editor
   win = new BrowserWindow({
-    autoHideMenuBar: true, icon: join(__dirname, '../../build/icon.png'), width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: '#111317', title: 'Mirror Studio',
+    autoHideMenuBar: true, icon: join(__dirname, '../../build/icon.png'),
+    // Our own title bar (logo + name, drawn by the page); the OS keeps only its minimize/maximize/close buttons.
+    titleBarStyle: 'hidden', titleBarOverlay: { color: '#0d0f13', symbolColor: '#e6e8ec', height: 40 },
+    width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: '#111317', title: 'Mirror Studio',
     webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true }
   })
   // Links never navigate the app window.
@@ -73,7 +76,7 @@ app.whenReady().then(() => {
     } catch (e) { console.error('[display-media] failed', e); cb({}) }
   })
   // Nothing but screen capture (and the 'media' gate in front of it) is granted: no other permission.
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media' || permission === 'clipboard-sanitized-write') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media' || permission === 'clipboard-sanitized-write' || permission === 'fullscreen') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
 
   ipcMain.handle('net-info', async () => {
     const ifaces = listInterfaces()

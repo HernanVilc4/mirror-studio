@@ -11,6 +11,10 @@ let hub: Hub | null = null
 let guest: Guest | null = null
 let screen: MediaStream | null = null
 let awaitingPresent = false
+/** Who owns the capture in `screen`: a presentation I asked for, or the primary screen shared because I am being controlled. */
+let screenKind: 'present' | 'control' | null = null
+let screenSince = 0
+let presentTimer = 0
 let scanTimer = 0
 let unsub: (() => void) | null = null
 let statsTimer = 0
@@ -64,7 +68,7 @@ export function leave() { void window.studio.leave() }
 function leaveLocal(reason: string) {
   hub?.close(); hub = null; guest?.close(); guest = null
   releaseScreen(); clearInterval(statsTimer)
-  set({ phase: 'home', intent: null, state: null, me: '', hostInfo: null, asks: [], presentation: null, controlView: null, sharing: false, rtt: undefined })
+  set({ phase: 'home', intent: null, state: null, me: '', hostInfo: null, asks: [], presentation: null, controlView: null, sharing: false, localPreview: null, rtt: undefined })
   notify(reason)
   void scan()
 }
@@ -86,7 +90,8 @@ function onMessage(m: ServerMessage) {
     case 'control-ended': {
       set({ asks: ui().asks.filter((a) => a.controller !== m.controller) })
       const me = ui().me
-      if (m.target === me && ui().state?.presenter !== me) releaseScreen()
+      // Only drop a capture made FOR control. A presentation started a moment ago must survive this late message.
+      if (m.target === me && screenKind === 'control') releaseScreen()
       if (m.target === me || m.controller === me) notify(`Control finalizado: ${m.reason}`)
       break
     }
@@ -102,8 +107,14 @@ function onMessage(m: ServerMessage) {
 function onState(state: SessionState) {
   set({ state })
   hub?.apply(state)
-  if (state.presenter === ui().me) awaitingPresent = false
-  else if (screen && !awaitingPresent && !state.controls.some((c) => c.target === ui().me)) releaseScreen()
+  const me = ui().me
+  if (state.presenter === me) { awaitingPresent = false; clearTimeout(presentTimer) }
+  const controlled = state.controls.some((c) => c.target === me)
+  if (screen && !awaitingPresent) {
+    if (screenKind === 'present' && state.presenter !== me) releaseScreen() // someone else took over, or the host dropped me
+    // A control capture starts before the state that lists it can arrive, so give it a moment before judging.
+    else if (screenKind === 'control' && !controlled && Date.now() - screenSince > 2500) releaseScreen()
+  }
   // Drop asks whose requester left.
   const ids = new Set(state.participants.map((p) => p.id))
   set({ asks: ui().asks.filter((a) => ids.has(a.controller)) })
@@ -126,40 +137,50 @@ function startMedia(me: string, state: SessionState) {
 export function kick(target: string) { send({ t: 'kick', target }) }
 export function setRole(target: string, role: AssignableRole) { send({ t: 'set-role', target, role }) }
 
-function attachScreen(s: MediaStream) {
-  releaseScreen(); screen = s
+function attachScreen(s: MediaStream, kind: 'present' | 'control') {
+  releaseScreen(); screen = s; screenKind = kind; screenSince = Date.now()
   const t = s.getVideoTracks()[0]
   t.onended = () => stopPresent()
   const a = s.getAudioTracks()[0] ?? null
   hub?.setLocalScreen(t, a); void guest?.setScreen(t, a)
-  set({ sharing: true })
+  set({ sharing: true, localPreview: kind === 'present' ? s : null })
 }
 function releaseScreen() {
-  screen?.getTracks().forEach((t) => t.stop()); screen = null
+  screen?.getTracks().forEach((t) => t.stop()); screen = null; screenKind = null
   hub?.setLocalScreen(null, null); void guest?.setScreen(null, null)
-  set({ sharing: false })
+  set({ sharing: false, localPreview: null })
 }
 /** `withAudio`: also share this PC's sound (a video's soundtrack, for example). Windows only. */
 export async function present(sourceId: string | null, withAudio = false) {
+  // Presenting and remote-controlling at once is ambiguous (which one fills the stage?): presenting wins, control ends.
+  const me = ui().me
+  for (const c of ui().state?.controls ?? []) if (c.controller === me) send({ t: 'control-revoke', other: c.target })
   try {
     const s = await captureScreen(sourceId, 'detail', withAudio)
     if (withAudio && s.getAudioTracks().length === 0) notify('No se pudo capturar el audio de esta PC. Se presenta solo la imagen.')
-    attachScreen(s)
+    attachScreen(s, 'present')
     awaitingPresent = true
     send({ t: 'present-start' })
+    // If the host never confirms (refused silently, network hiccup) do not stay half-presenting forever.
+    clearTimeout(presentTimer)
+    presentTimer = window.setTimeout(() => {
+      if (!awaitingPresent) return
+      awaitingPresent = false
+      if (ui().state?.presenter !== ui().me) { releaseScreen(); notify('El anfitrión no confirmó la presentación. Inténtalo otra vez.') }
+    }, 6000)
   } catch (e) {
     console.error('captureScreen', e)
     notify(`No se pudo capturar la pantalla: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`)
   }
 }
 export function stopPresent() {
-  awaitingPresent = false
+  awaitingPresent = false; clearTimeout(presentTimer)
   if (ui().state?.presenter === ui().me) send({ t: 'present-stop' })
   releaseScreen()
 }
 /** The controlled PC must show its primary screen: control coordinates are normalized over it. */
 async function startControlCapture() {
-  try { attachScreen(await captureScreen(null, 'motion')) } catch {
+  try { attachScreen(await captureScreen(null, 'motion'), 'control') } catch {
     notify('No se pudo compartir tu pantalla, así que se canceló el control.')
     const c = ui().state?.controls.find((x) => x.target === ui().me)
     if (c) send({ t: 'control-revoke', other: c.controller })

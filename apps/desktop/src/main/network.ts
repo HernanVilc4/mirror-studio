@@ -74,11 +74,22 @@ export function firewallStatus(exePath: string): Promise<FirewallStatus> {
   return new Promise((resolve) => {
     execFile('netsh', ['advfirewall', 'firewall', 'show', 'rule', 'name=all', 'dir=in', 'verbose'], { timeout: 8000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (err, stdout) => {
       if (err) return resolve('unknown')
-      const blocks = stdout.split(/\r?\n\r?\n/)
-      const mine = blocks.filter((b) => b.toLowerCase().includes(exePath.toLowerCase()))
-      resolve(mine.some((b) => /Action:\s+Allow/i.test(b) && /Enabled:\s+Yes/i.test(b)) ? 'ok' : 'missing')
+      resolve(parseFirewall(stdout, exePath, DEFAULT_PORT))
     })
   })
+}
+
+/**
+ * Reads `netsh ... show rule verbose`. netsh prints in the system language and OEM code page, so accents
+ * may arrive mangled ("Acci�n", "S�"): labels are matched loosely. A rule counts when it is for this
+ * program OR opens our TCP port.
+ */
+export function parseFirewall(stdout: string, exePath: string, port: number): 'ok' | 'missing' {
+  const blocks = stdout.split(/\r?\n\s*\r?\n/)
+  const opensPort = new RegExp(`LocalPort:\\s+(?:\\S+,)*${port}(?:,|\\s|$)`, 'm')
+  const mine = blocks.filter((b) => b.toLowerCase().includes(exePath.toLowerCase()) || opensPort.test(b))
+  const allows = (b: string) => /(Action|Acci.{1,2}n):\s+(Allow|Permitir)/i.test(b) && /(Enabled|Habilitada):\s+(Yes|S.{1,2})\s*$/im.test(b)
+  return mine.some(allows) ? 'ok' : 'missing'
 }
 
 /** Command an administrator runs once, shown in the app and in the firewall guide. */

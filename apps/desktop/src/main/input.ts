@@ -110,11 +110,12 @@ public static class MS {
 }
 "@
 [void][MS]::SetProcessDPIAware()  # without it, scaled displays get virtualized coordinates
+$lx = 0; $ly = 0
 while (($line = [Console]::In.ReadLine()) -ne $null) {
   $p = $line.Split(' ')
   switch ($p[0]) {
-    'M' { [MS]::Mouse([int]$p[1], [int]$p[2], 0, 0x8001) }                       # MOVE | ABSOLUTE (0..65535)
-    'B' { $f = [uint32]$p[1]; if (($f -band 0x2a) -ne 0) { Start-Sleep -Milliseconds 25 }; [MS]::Mouse(0, 0, 0, $f) }  # a press waits so the window sees the hover first (title-bar buttons need it)
+    'M' { $lx = [int]$p[1]; $ly = [int]$p[2]; [MS]::Mouse($lx, $ly, 0, 0x8001) }  # MOVE | ABSOLUTE (0..65535)
+    'B' { $f = [uint32]$p[1]; if (($f -band 0x2a) -ne 0) { [MS]::Mouse($lx, $ly, 0, 0x8001); Start-Sleep -Milliseconds 40 }; [MS]::Mouse(0, 0, 0, $f) }  # a press waits so the window sees the hover first (title-bar buttons need it)
     'W' { if ([int]$p[2] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[2]), 0x0800) }; if ([int]$p[1] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[1]), 0x1000) } }
     'K' { [MS]::Key([uint16]$p[1], 0, [uint32]$p[2]) }                           # flags: 1 = extended, 2 = key up
     'T' { foreach ($c in [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[1])).ToCharArray()) { [MS]::Key(0, [uint16]$c, 4); [MS]::Key(0, [uint16]$c, 6) } }
