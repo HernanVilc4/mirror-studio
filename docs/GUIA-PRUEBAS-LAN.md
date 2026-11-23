@@ -13,7 +13,7 @@ En esta guía:
 - **PC A** = anfitrión, quien crea la reunión.
 - **PC B** = invitado, quien se une. Si hay más PCs, son **C**, **D**…
 
-> Sesión actual: la PC A es `DESKTOP-A3KT7I1`, con IP **172.20.79.245** (Wi-Fi). El código de 8 caracteres aparece arriba en la sala cuando A crea la reunión.
+> La IP de A **puede cambiar** de un día a otro (la Wi-Fi la asigna por DHCP). Usa siempre la que aparece arriba en la sala de A, junto al código de 8 caracteres. En los ejemplos de abajo, `172.20.86.233` es solo un ejemplo.
 
 ## 2. Requisitos del sistema
 
@@ -61,9 +61,9 @@ En esta guía:
 2. En la PC A, pulsa **Crear reunión** y luego **Crear y entrar**.
 3. Desde la PC B, comprueba que llega al anfitrión. En PowerShell:
    ```
-   Test-NetConnection 172.20.79.245 -Port 47800
+   Test-NetConnection 172.20.86.233 -Port 47800
    ```
-   Cambia la IP por la de A. Debe salir `TcpTestSucceeded : True`. En Ubuntu: `nc -zv 172.20.79.245 47800`.
+   Cambia la IP por la de A. Debe salir `TcpTestSucceeded : True`. En Ubuntu: `nc -zv 172.20.86.233 47800`.
 4. Si sale `False`, revisa la sección 7 antes de seguir.
 
 ## 5. Flujo de pruebas paso a paso

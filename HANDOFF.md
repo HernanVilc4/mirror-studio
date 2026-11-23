@@ -16,7 +16,7 @@ npm run dev                                # electron-vite
 
 ### Entorno de prueba real
 - **PC Windows 11** (`DESKTOP-A3KT7I1`, Windows en español):
-  - Red usada: **Wi-Fi 172.20.79.245**, perfil Privado.
+  - Red usada: **Wi-Fi**, perfil Privado. IP por DHCP: 172.20.79.245 el 23-nov por la mañana y 172.20.86.233 por la tarde.
   - También tiene `Ethernet 172.22.1.43` (sin perfil), un adaptador VirtualBox `Ethernet 3 192.168.56.1` y uno WSL.
   - Regla de firewall creada a mano: `netsh advfirewall firewall add rule name="Mirror Studio" dir=in action=allow protocol=TCP localport=47800 profile=private,domain`.
 - **PC Ubuntu** (`luck-acer`, 172.20.79.240), en la misma Wi-Fi. Hace de anfitrión o de invitado. Se actualiza con `git pull`.
