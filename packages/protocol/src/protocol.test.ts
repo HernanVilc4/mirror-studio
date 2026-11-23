@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  parseClient, parseServer, parseHandshake, parseControlInput, mapPointToVideo, MAX_MESSAGE_BYTES,
+  parseClient, parseServer, PROTOCOL_VERSION, parseHandshake, parseControlInput, mapPointToVideo, MAX_MESSAGE_BYTES,
   canAssign, canKick, canPresent, canRequestControl, isValidCode, normalizeCode, formatCode, CODE_ALPHABET, type Role
 } from './index'
 import { ClientHandshake, HostHandshake, SecureChannel, generateCode, generateSalt } from './node'
@@ -28,11 +28,25 @@ describe('parsing', () => {
     expect(parseControlInput(JSON.stringify({ t: 'wheel', dx: 0, dy: 99999 })).ok).toBe(false)
     expect(parseHandshake(JSON.stringify({ t: 'info' })).ok).toBe(true)
   })
+  it('carries control health both ways, with a bounded detail and a known code', () => {
+    const health = { code: 'blocked-admin', detail: 'Taskmgr', received: 12 }
+    expect(parseClient(JSON.stringify({ t: 'control-status', other: 'a', health })).ok).toBe(true)
+    expect(parseServer(JSON.stringify({ t: 'control-status', from: 'a', health })).ok).toBe(true)
+    expect(parseClient(JSON.stringify({ t: 'control-status', other: 'a', health: { ...health, code: 'pwned' } })).ok).toBe(false)
+    expect(parseClient(JSON.stringify({ t: 'control-status', other: 'a', health: { ...health, detail: 'x'.repeat(65) } })).ok).toBe(false)
+    expect(parseClient(JSON.stringify({ t: 'control-status', other: 'a', health: { ...health, received: -1 } })).ok).toBe(false)
+    expect(parseClient(JSON.stringify({ t: 'control-reset', target: 'a' })).ok).toBe(true)
+    expect(parseServer(JSON.stringify({ t: 'control-reset', from: 'a' })).ok).toBe(true)
+  })
+  it('lists a meeting of another version (the join then explains it), but never handshakes with it', () => {
+    expect(parseHandshake(JSON.stringify({ t: 'info-reply', v: 2, name: 'Clase', host: 'PC', participants: 1 })).ok).toBe(true)
+    expect(parseHandshake(JSON.stringify({ t: 'hello', v: 2, pub: 'a', nonce: 'b', name: 'c' })).ok).toBe(false)
+  })
 })
 
 describe('roles', () => {
   const roles: Role[] = ['creator', 'admin', 'teacher', 'participant']
-  it('only teachers and above present and request control', () => {
+  it('everyone presents; only teachers and above request control', () => {
     expect(roles.map(canPresent)).toEqual([true, true, true, true])
     expect(roles.map(canRequestControl)).toEqual([true, true, true, false])
   })
@@ -128,7 +142,7 @@ describe('authenticated handshake', () => {
   })
   it('rejects a bad public key', () => {
     const host = new HostHandshake('AAAAAAAA', generateSalt(), IT)
-    expect(host.onHello({ t: 'hello', v: 2, pub: 'AAAA', nonce: 'x', name: 'n' })).toBeNull()
+    expect(host.onHello({ t: 'hello', v: PROTOCOL_VERSION, pub: 'AAAA', nonce: 'x', name: 'n' })).toBeNull()
   })
 })
 

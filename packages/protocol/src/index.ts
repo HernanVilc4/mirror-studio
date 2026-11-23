@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
-export const PROTOCOL_VERSION = 2
+/** Bumped to 3 for the control health messages: an older host would drop a peer that sends them. */
+export const PROTOCOL_VERSION = 3
 /** Hard cap for any signaling frame (SDP is the largest, ~10 KB). */
 export const MAX_MESSAGE_BYTES = 64 * 1024
 /** Participants per session. A target, not a promise: see the load measurements in HANDOFF.md. */
@@ -21,7 +22,6 @@ export type AssignableRole = z.infer<typeof AssignableRole>
 const RANK: Record<Role, number> = { creator: 3, admin: 2, teacher: 1, participant: 0 }
 export const rank = (r: Role) => RANK[r]
 
-/** Who may present their screen and ask to control another PC. */
 /** Everyone may present. Taking over someone else's presentation still needs equal or higher rank (see the host). */
 export const canPresent = (_r: Role) => true
 export const canRequestControl = (r: Role) => rank(r) >= RANK.teacher
@@ -43,7 +43,8 @@ export function canAssign(actor: Role, target: Role, next: AssignableRole): bool
 // ---------------------------------------------------------------------------
 export const InfoRequest = z.object({ t: z.literal('info') })
 export const InfoReply = z.object({
-  t: z.literal('info-reply'), v: z.literal(PROTOCOL_VERSION),
+  // Any version parses, so the discovery list can still show a meeting that runs another version (and say so).
+  t: z.literal('info-reply'), v: z.number().int().min(1).max(1000),
   name: str(64), host: str(64), participants: z.number().int().min(0).max(1000)
 })
 export const Hello = z.object({
@@ -103,6 +104,25 @@ export const ControlRequest = z.object({ t: z.literal('control-request'), target
 export const ControlRespond = z.object({ t: z.literal('control-respond'), controller: id, accept: z.boolean() })
 export const ControlRevoke = z.object({ t: z.literal('control-revoke'), other: id })
 export const ControlSend = z.object({ t: z.literal('control-input'), target: id, input: ControlInput })
+/**
+ * How remote control is doing on the controlled PC, sent by it to its controller every few seconds:
+ * - ok: input is applied
+ * - restarting: the injector died or hung and is being started again
+ * - blocked-admin: Windows drops injected input because an elevated window (detail: its process) is in front
+ * - blocked-secure: a secure screen is up (UAC prompt, lock screen, Ctrl+Alt+Del), nothing can be injected
+ * - rejected: Windows refused the injected input without saying why
+ * `received` counts the input events that reached the controlled PC since control started.
+ */
+export const ControlHealth = z.object({
+  code: z.enum(['ok', 'restarting', 'blocked-admin', 'blocked-secure', 'rejected']),
+  detail: z.string().max(64).optional(),
+  received: z.number().int().min(0)
+})
+export type ControlHealth = z.infer<typeof ControlHealth>
+/** From the controlled PC, about its controller `other`. */
+export const ControlStatus = z.object({ t: z.literal('control-status'), other: id, health: ControlHealth })
+/** From the controller: input or picture stopped working, so the controlled PC restarts its injector and capture. */
+export const ControlReset = z.object({ t: z.literal('control-reset'), target: id })
 /** WebRTC signaling between a participant and the host's media hub. */
 export const Rtc = z.object({
   t: z.literal('rtc'),
@@ -112,7 +132,7 @@ export const Rtc = z.object({
 export const Leave = z.object({ t: z.literal('leave') })
 export const ClientMessage = z.discriminatedUnion('t', [
   Kick, SetRole, PresentStart, PresentStop,
-  ControlRequest, ControlRespond, ControlRevoke, ControlSend, Rtc, Leave
+  ControlRequest, ControlRespond, ControlRevoke, ControlSend, ControlStatus, ControlReset, Rtc, Leave
 ])
 export type ClientMessage = z.infer<typeof ClientMessage>
 
@@ -123,10 +143,12 @@ export const ControlAsked = z.object({ t: z.literal('control-asked'), controller
 export const ControlStarted = z.object({ t: z.literal('control-started'), controller: id, target: id })
 export const ControlEnded = z.object({ t: z.literal('control-ended'), controller: id, target: id, reason: str(120) })
 export const ControlInputIn = z.object({ t: z.literal('control-input'), from: id, input: ControlInput })
+export const ControlStatusIn = z.object({ t: z.literal('control-status'), from: id, health: ControlHealth })
+export const ControlResetIn = z.object({ t: z.literal('control-reset'), from: id })
 export const Notice = z.object({ t: z.literal('notice'), text: str(200) })
 export const Closed = z.object({ t: z.literal('closed'), reason: str(200) })
 export const ServerMessage = z.discriminatedUnion('t', [
-  Welcome, StateMsg, ControlAsked, ControlStarted, ControlEnded, ControlInputIn, Notice, Closed, Rtc
+  Welcome, StateMsg, ControlAsked, ControlStarted, ControlEnded, ControlInputIn, ControlStatusIn, ControlResetIn, Notice, Closed, Rtc
 ])
 export type ServerMessage = z.infer<typeof ServerMessage>
 

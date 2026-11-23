@@ -23,11 +23,11 @@ function make(supported = true) {
   const { d, calls } = driver(supported)
   const events: UiEvent[] = []
   const banner: ({ id: string; name: string } | null)[] = []
-  const s = new AppSession(d, (e) => events.push(e), IT, (by) => banner.push(by))
+  const s = new AppSession(d, (e) => events.push(e), IT, (by) => banner.push(by), 30)
   sessions.push(s)
   const msgs = () => events.filter((e): e is Extract<UiEvent, { t: 'message' }> => e.t === 'message').map((e) => e.m)
   const of = <T extends ServerMessage['t']>(t: T) => msgs().filter((m) => m.t === t) as Extract<ServerMessage, { t: T }>[]
-  return { s, calls, events, msgs, of, banner }
+  return { s, d, calls, events, msgs, of, banner }
 }
 const until = async (pred: () => boolean) => { for (let i = 0; i < 200 && !pred(); i++) await new Promise((r) => setTimeout(r, 10)); return pred() }
 
@@ -167,5 +167,51 @@ describe('PC control lifecycle', () => {
     expect(prof.of('control-ended')[0].reason).toBe('Rechazado')
     expect(luis.of('notice').some((n) => n.text.includes('no admite control'))).toBe(true)
     expect(prof.of('control-started')).toHaveLength(0)
+  })
+})
+
+describe('health of a controlled PC', () => {
+  it('reports to the controller while controlled, with what arrived, and stops when control ends', async () => {
+    const { prof, luis } = await lab()
+    await grant(prof, luis)
+    prof.s.send({ t: 'control-input', target: luis.s.id, input: { t: 'mouse-move', x: 0.3, y: 0.4 } })
+    expect(await until(() => prof.of('control-status').some((m) => m.health.received === 1))).toBe(true)
+    expect(prof.of('control-status').at(-1)).toMatchObject({ from: luis.s.id, health: { code: 'ok' } })
+    luis.s.send({ t: 'control-revoke', other: prof.s.id })
+    await until(() => prof.of('control-ended').length === 1)
+    await new Promise((r) => setTimeout(r, 100))
+    const n = prof.of('control-status').length
+    await new Promise((r) => setTimeout(r, 150))
+    expect(prof.of('control-status').length).toBe(n) // no more reports
+  })
+  it('tells the person in front when an admin window blocks control, and the controller why', async () => {
+    const { prof, luis } = await lab()
+    luis.d.probe = async () => ({ code: 'blocked-admin', detail: 'Taskmgr' })
+    await grant(prof, luis)
+    expect(await until(() => prof.of('control-status').some((m) => m.health.code === 'blocked-admin'))).toBe(true)
+    await new Promise((r) => setTimeout(r, 100))
+    const local = luis.events.filter((e) => e.t === 'notice')
+    expect(local).toHaveLength(1) // once per change, not every report
+    expect(local[0]).toMatchObject({ text: expect.stringContaining('Taskmgr') })
+  })
+  it('a reset from the controller restarts the injector of the PC it controls, and nobody else', async () => {
+    const { prof, luis } = await lab()
+    let resets = 0
+    luis.d.reset = () => { resets++ }
+    prof.d.reset = () => { resets += 100 }
+    await grant(prof, luis)
+    prof.s.send({ t: 'control-reset', target: luis.s.id })
+    expect(await until(() => resets === 1)).toBe(true)
+    expect(luis.of('control-reset')).toHaveLength(1) // the window hears it too: it re-captures the screen
+    luis.s.send({ t: 'control-reset', target: prof.s.id }) // the controlled side cannot reset its controller
+    await new Promise((r) => setTimeout(r, 100))
+    expect(resets).toBe(1)
+  })
+  it('does not flood the window with the mouse moves it applies', async () => {
+    const { prof, luis } = await lab()
+    await grant(prof, luis)
+    prof.s.send({ t: 'control-input', target: luis.s.id, input: { t: 'mouse-move', x: 0.3, y: 0.4 } })
+    await until(() => luis.calls.includes('move 0.3,0.4'))
+    expect(luis.of('control-input')).toHaveLength(0)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RemoteInput, KEYMAP, INPUT_HELPER_SCRIPT, type InputDriver } from './input'
+import { RemoteInput, KEYMAP, INPUT_HELPER_SCRIPT, createWindowsDriver, readProbe, type InputDriver } from './input'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -77,6 +77,27 @@ describe('RemoteInput', () => {
     expect(KEYMAP.KeyA).toEqual([0x41, false])
     expect(KEYMAP.F5).toEqual([0x74, false])
   })
+  it('counts what it receives from the current controller only, from zero at each grant', () => {
+    const { d } = fake(); const r = new RemoteInput(d)
+    r.begin('prof')
+    r.apply('prof', { t: 'mouse-move', x: 0.1, y: 0.1 })
+    r.apply('prof', { t: 'key', code: 'LaunchApp1', down: true }) // ignored key, but it did arrive
+    r.apply('eve', { t: 'mouse-move', x: 0.1, y: 0.1 })
+    expect(r.received).toBe(2)
+    r.begin('ana')
+    expect(r.received).toBe(0)
+  })
+  it('reset restarts the injector first, then lifts what was held through the new one', () => {
+    const { d, calls } = fake(); d.reset = () => calls.push('reset')
+    const r = new RemoteInput(d)
+    r.begin('prof'); r.apply('prof', { t: 'key', code: 'ShiftLeft', down: true }); calls.length = 0
+    r.reset()
+    expect(calls).toEqual(['reset', 'key 160 up'])
+  })
+  it('a driver without health checks reports ok', async () => {
+    const { d } = fake(); const r = new RemoteInput(d)
+    expect(await r.probe()).toEqual({ code: 'ok' })
+  })
   it('dispose releases and shuts the driver', () => {
     const { d, calls } = fake(); const r = new RemoteInput(d)
     r.begin('prof'); r.apply('prof', { t: 'mouse-button', button: 'right', down: true }); calls.length = 0
@@ -97,4 +118,47 @@ describe.runIf(process.platform === 'win32')('Windows input helper', () => {
     expect(r.stderr).toContain("input 'M abc def'")
     expect(r.stderr).toContain("input 'K notanumber 0'")
   }, 70_000)
+})
+
+describe('reading a probe answer', () => {
+  it('maps the helper answer to a health code', () => {
+    expect(readProbe('0 ok', 0)).toEqual({ health: { code: 'ok' }, refused: 0 })
+    expect(readProbe('0 secure', 0).health).toEqual({ code: 'blocked-secure' })
+    expect(readProbe('0 admin Taskmgr', 0).health).toEqual({ code: 'blocked-admin', detail: 'Taskmgr' })
+    expect(readProbe('0 admin ?', 0).health).toEqual({ code: 'blocked-admin', detail: '?' })
+  })
+  it('a growing refusal count means Windows dropped input, even if nothing is visibly in the way', () => {
+    expect(readProbe('3 ok', 1)).toEqual({ health: { code: 'rejected' }, refused: 3 })
+    expect(readProbe('3 ok', 3).health).toEqual({ code: 'ok' })
+    expect(readProbe('garbage', 0).health.code).toBe('ok')
+  })
+})
+
+// Health probes only read state (desktop, foreground window): none of these send real input.
+describe.runIf(process.platform === 'win32')('Windows input helper health', () => {
+  it('says it is ready, then answers a probe', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'ms-input-')), 'input.ps1')
+    writeFileSync(file, INPUT_HELPER_SCRIPT, 'utf8')
+    const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file],
+      { input: 'P 7\nQ\n', encoding: 'utf8', timeout: 60_000, windowsHide: true })
+    expect(r.status).toBe(0)
+    const lines = r.stdout.trim().split(/\r?\n/)
+    expect(lines[0]).toBe('R')
+    expect(lines[1]).toMatch(/^P 7 0 (ok|secure|admin .+)$/)
+  }, 70_000)
+  it('the driver answers probes, and replaces a helper that does not answer in time', async () => {
+    const drv = createWindowsDriver()
+    try {
+      let h = await drv.probe!()
+      for (let i = 0; i < 10 && h.code === 'restarting'; i++) h = await drv.probe!() // still compiling on a slow PC
+      expect(['ok', 'blocked-admin', 'blocked-secure']).toContain(h.code)
+      drv.reset!() // what a controller's "Reintentar" does
+      h = await drv.probe!()
+      for (let i = 0; i < 10 && h.code === 'restarting'; i++) h = await drv.probe!()
+      expect(['ok', 'blocked-admin', 'blocked-secure']).toContain(h.code)
+    } finally { drv.dispose() }
+    // Impatient driver: no helper can answer in 1 ms, and with no start-up grace it is replaced, not waited on.
+    const impatient = createWindowsDriver({ probeMs: 1, bootMs: 0 })
+    try { expect(await impatient.probe!()).toEqual({ code: 'restarting' }) } finally { impatient.dispose() }
+  }, 90_000)
 })
