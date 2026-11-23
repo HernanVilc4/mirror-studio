@@ -22,7 +22,8 @@ const RANK: Record<Role, number> = { creator: 3, admin: 2, teacher: 1, participa
 export const rank = (r: Role) => RANK[r]
 
 /** Who may present their screen and ask to control another PC. */
-export const canPresent = (r: Role) => rank(r) >= RANK.teacher
+/** Everyone may present. Taking over someone else's presentation still needs equal or higher rank (see the host). */
+export const canPresent = (_r: Role) => true
 export const canRequestControl = (r: Role) => rank(r) >= RANK.teacher
 /** Kicking needs admin and strictly higher rank than the target. */
 export const canKick = (actor: Role, target: Role) => rank(actor) >= RANK.admin && rank(actor) > rank(target)

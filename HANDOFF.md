@@ -1,6 +1,76 @@
 # Handoff — Mirror Studio (Windows, solo PC a PC en LAN)
 
-Actualizado: 22 de noviembre de 2026.
+Actualizado: 23 de noviembre de 2026 (sesión de pruebas reales Windows ↔ Ubuntu). La versión del 22 sigue abajo, desde la sección 1.
+
+## 0. Retomar aquí (sesión del 23 de noviembre)
+
+### Cómo arrancar
+```
+npm install
+npm run build -w @mirror-studio/protocol   # obligatorio tras cambiar packages/protocol
+npm run dev                                # electron-vite
+```
+- **`electron-vite dev` solo recarga en caliente el renderer.** Si cambias `src/main/*` o `src/preload/*`, hay que parar y volver a lanzar. Si no, la ventana corre código viejo, como pasó con la pantalla negra tras un `git pull`.
+- Si aparece «El puerto 47800 ya está en uso», queda otra instancia de Electron viva: ciérrala.
+- Para parar solo la app sin matar otros Node: termina `electron.exe` y el `node … electron-vite.js dev`.
+
+### Entorno de prueba real
+- **PC Windows 11** (`DESKTOP-A3KT7I1`, Windows en español):
+  - Red usada: **Wi-Fi 172.20.79.245**, perfil Privado.
+  - También tiene `Ethernet 172.22.1.43` (sin perfil), un adaptador VirtualBox `Ethernet 3 192.168.56.1` y uno WSL.
+  - Regla de firewall creada a mano: `netsh advfirewall firewall add rule name="Mirror Studio" dir=in action=allow protocol=TCP localport=47800 profile=private,domain`.
+- **PC Ubuntu** (`luck-acer`, 172.20.79.240), en la misma Wi-Fi. Hace de anfitrión o de invitado. Se actualiza con `git pull`.
+- Ya funciona entre ambas: unirse por IP y código, presentar, pedir y dar control.
+
+### Hecho hoy (commits en `main`: f713173, 7ab1fc5, 99b613e, 693db17 y lo pendiente de abajo)
+- **Permisos de Electron** (`main/index.ts`, `setPermissionRequestHandler`): se permiten `display-capture`, `media`, `clipboard-sanitized-write` y `fullscreen`.
+  - Chromium pide `media` antes de `getDisplayMedia`. Al negarlo, salía `NotAllowedError: Permission denied`.
+- **Interfaz de red** (`network.ts`): los adaptadores de VM se detectan también por el prefijo de la MAC (VirtualBox, VMware, Hyper-V). Antes se anunciaba 192.168.56.1.
+- **Firewall** (`parseFirewall`): entiende la salida de `netsh` en español y con acentos rotos por la página OEM, y acepta reglas por puerto. Antes siempre decía «falta la regla».
+- **Vídeo** (`media.ts`, `videoLimits`):
+  - Bitrate y fps se reparten según el número de espectadores: 12 Mbps y 30 fps con 1, hasta 2,5 Mbps y 15 fps con 35. Presupuesto de unos 80 Mbps de salida del anfitrión.
+  - Captura hasta 1440p, con `degradationPreference: maintain-resolution`.
+- **Control remoto** (`input.ts`):
+  - El helper de PowerShell es DPI-aware.
+  - Antes de cada pulsación vuelve a mover el cursor a la última posición y espera 40 ms, para que los botones de la barra de título (minimizar, cerrar) registren el hover.
+  - **Sin confirmar** que esto arregle los clics que fallaban.
+- **Estados** (`controller.ts`):
+  - La captura tiene dueño (`screenKind`: `present` o `control`).
+  - `present-start` sin confirmación caduca a los 6 s.
+  - Presentar termina los controles que yo ejerzo.
+- **Interfaz**:
+  - Barra de título propia (`titleBarStyle: 'hidden'` + `titleBarOverlay`) y portada rediseñada con animación del logo.
+  - Botones con iconos animados, sin flechas de texto. Copiar IP, código o ambos solo con icono.
+  - Panel de participantes plegable.
+  - Pantalla completa del escenario y de la vista de control.
+  - Barra flotante «Controlando X» fuera de la zona que captura teclado y ratón.
+  - El presentador ve su propia presentación, con un botón de ojo para ocultarla y evitar el espejo infinito. La preferencia se guarda en `localStorage`.
+
+### Documentos (23-nov)
+- `docs/GUIA-PRUEBAS-LAN.md`: guía de pruebas generales en red local (29 pruebas). La sección 5.4 cubre los escenarios que fallaban.
+- `docs/GUIA-DOCUMENTACION.md`: cómo un compañero hace los 3 documentos (Para ejecutar, Manual de uso, Código fuente) **copiando las plantillas `.docx` de PushProMaster que están en `docs/`**, con el mismo formato y solo el contenido adaptado.
+- Firewall de la PC Windows de pruebas: además de la regla del puerto, hay una regla por programa `Mirror Studio (dev)` para `node_modules\electron\dist\electron.exe` (TCP y UDP, Privada y Dominio).
+
+### Último arreglo (subido el 23-nov, sin probar aún entre dos PCs)
+- **Fallo reproducido:** A presenta, B le pide control, B deja el control → A queda «presentando» sin enviar imagen. B ve el último fotograma congelado, con la barra roja.
+  - **Causa:** al aceptar el control, la captura de A se reemplaza por la de pantalla completa, de tipo `control`. Al terminar, esa captura se soltaba aunque A seguía siendo presentador.
+  - **Arreglo:** `endControlCapture()`. Si sigo presentando, la captura vuelve a ser `present` y se recaptura la fuente que había elegido (`presentSource`: ventana y audio).
+  - **No probado entre dos PCs.**
+- **Todos pueden presentar:** `canPresent` devuelve `true` para cualquier rol. Sigue sin poder quitarle la presentación alguien de rango menor a uno de rango mayor. Perder un rol ya no corta la presentación. Tests actualizados.
+- Tests: protocolo 22 ✓, escritorio 63 ✓, typecheck ✓.
+
+### Próximo paso
+1. Subir lo pendiente. Luego, en el Ubuntu, `git pull`.
+2. Repetir el escenario del fallo: A presenta una **ventana** → B pide control → A acepta → B deja el control. Comprobar:
+   - B vuelve a ver la ventana de A, no la pantalla entera.
+   - A ve su espejo.
+   - La barra roja de A desaparece.
+3. Probar los clics remotos sobre minimizar y cerrar. Si siguen fallando, añadir un `SetCursorPos` antes de pulsar, o mover el cursor por fuera y luego dentro del botón.
+4. Confirmar en Linux que la barra de título propia muestra los botones del sistema (`titleBarOverlay` en Linux).
+5. Revisar la calidad de vídeo percibida con 1 espectador y medir la CPU del anfitrión con varios.
+6. Pendientes de la sección 7 y las 5 vulnerabilidades de `npm audit`.
+
+Nota: la sección 3 habla de «SFU en el anfitrión», pero lo implementado es el concentrador con `replaceTrack` descrito en la fase 3. No hay SFU.
 
 ## 1. Visión
 
@@ -8,7 +78,7 @@ Mirror Studio es una alternativa local a Google Meet para laboratorios y aulas. 
 
 Casos de uso:
 - **Reunión o clase:** una persona crea una sesión; el resto se une desde la lista de sesiones detectadas o con IP y código.
-- **Presentar pantalla:** un docente o administrador comparte su pantalla o una ventana, y todos la ven.
+- **Presentar pantalla:** cualquiera comparte su pantalla o una ventana, y todos la ven (desde el 23-nov; antes solo docentes y administradores).
 - **Control remoto de PC:** un docente o administrador pide controlar la PC de un participante. El participante acepta o rechaza, y puede revocar en cualquier momento.
 - **Roles:** el creador es administrador y puede asignar o retirar los roles de docente y administrador.
 
@@ -31,7 +101,7 @@ Casos de uso:
 | **Creador** | Quien crea la sesión. Es administrador permanente. | Todo lo del administrador, y no se le puede retirar el rol. Al cerrarse la sesión se pierde el anfitrión. |
 | **Administrador** | Solo lo asigna el creador. | Expulsar (a docentes y participantes), asignar o retirar docentes, presentar, pedir control. |
 | **Docente** | Lo asigna el creador o un administrador. | Presentar (con el sonido de su PC), pedir control. |
-| **Participante** | Se une a la sesión. | Ver y oír la presentación, aceptar o rechazar solicitudes de control. |
+| **Participante** | Se une a la sesión. | Presentar (si nadie de rango mayor presenta), ver y oír la presentación, aceptar o rechazar solicitudes de control. |
 
 Reglas que no se negocian:
 1. **El anfitrión valida todos los permisos.** Ningún cliente se autoriza a sí mismo.

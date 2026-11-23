@@ -33,7 +33,7 @@ describe('parsing', () => {
 describe('roles', () => {
   const roles: Role[] = ['creator', 'admin', 'teacher', 'participant']
   it('only teachers and above present and request control', () => {
-    expect(roles.map(canPresent)).toEqual([true, true, true, false])
+    expect(roles.map(canPresent)).toEqual([true, true, true, true])
     expect(roles.map(canRequestControl)).toEqual([true, true, true, false])
   })
   it('the creator can never be changed or kicked', () => {

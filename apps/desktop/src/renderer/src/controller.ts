@@ -15,6 +15,8 @@ let awaitingPresent = false
 let screenKind: 'present' | 'control' | null = null
 let screenSince = 0
 let presentTimer = 0
+/** What I chose to present, to get it back after someone's remote control forced the whole screen. */
+let presentSource: { id: string | null; audio: boolean } | null = null
 let scanTimer = 0
 let unsub: (() => void) | null = null
 let statsTimer = 0
@@ -91,7 +93,7 @@ function onMessage(m: ServerMessage) {
       set({ asks: ui().asks.filter((a) => a.controller !== m.controller) })
       const me = ui().me
       // Only drop a capture made FOR control. A presentation started a moment ago must survive this late message.
-      if (m.target === me && screenKind === 'control') releaseScreen()
+      if (m.target === me && screenKind === 'control') endControlCapture()
       if (m.target === me || m.controller === me) notify(`Control finalizado: ${m.reason}`)
       break
     }
@@ -113,7 +115,7 @@ function onState(state: SessionState) {
   if (screen && !awaitingPresent) {
     if (screenKind === 'present' && state.presenter !== me) releaseScreen() // someone else took over, or the host dropped me
     // A control capture starts before the state that lists it can arrive, so give it a moment before judging.
-    else if (screenKind === 'control' && !controlled && Date.now() - screenSince > 2500) releaseScreen()
+    else if (screenKind === 'control' && !controlled && Date.now() - screenSince > 2500) endControlCapture()
   }
   // Drop asks whose requester left.
   const ids = new Set(state.participants.map((p) => p.id))
@@ -143,13 +145,31 @@ function attachScreen(s: MediaStream, kind: 'present' | 'control') {
   t.onended = () => stopPresent()
   const a = s.getAudioTracks()[0] ?? null
   hub?.setLocalScreen(t, a); void guest?.setScreen(t, a)
-  set({ sharing: true, localPreview: kind === 'present' ? s : null })
+  // While presenting, the control capture IS what the others see, so I keep seeing it too.
+  set({ sharing: true, localPreview: kind === 'present' || ui().state?.presenter === ui().me ? s : null })
 }
 function releaseScreen() {
   screen?.getTracks().forEach((t) => t.stop()); screen = null; screenKind = null
   hub?.setLocalScreen(null, null); void guest?.setScreen(null, null)
   set({ sharing: false, localPreview: null })
 }
+/**
+ * Control of this PC ended. If I am still presenting, the capture must NOT be dropped (the others would
+ * be left with a frozen picture): it becomes my presentation again, then the source I had chosen
+ * (a window, my sound) is captured back.
+ */
+function endControlCapture() {
+  const me = ui().me
+  if (ui().state?.presenter !== me && !awaitingPresent) { releaseScreen(); return }
+  screenKind = 'present'; set({ localPreview: screen })
+  const src = presentSource
+  if (src && (src.id !== null || src.audio)) {
+    captureScreen(src.id, 'detail', src.audio)
+      .then((s) => { if (screenKind === 'present' && ui().state?.presenter === ui().me) attachScreen(s, 'present'); else s.getTracks().forEach((t) => t.stop()) })
+      .catch(() => { /* keep sharing the whole screen */ })
+  }
+}
+
 /** `withAudio`: also share this PC's sound (a video's soundtrack, for example). Windows only. */
 export async function present(sourceId: string | null, withAudio = false) {
   // Presenting and remote-controlling at once is ambiguous (which one fills the stage?): presenting wins, control ends.
@@ -158,6 +178,7 @@ export async function present(sourceId: string | null, withAudio = false) {
   try {
     const s = await captureScreen(sourceId, 'detail', withAudio)
     if (withAudio && s.getAudioTracks().length === 0) notify('No se pudo capturar el audio de esta PC. Se presenta solo la imagen.')
+    presentSource = { id: sourceId, audio: withAudio }
     attachScreen(s, 'present')
     awaitingPresent = true
     send({ t: 'present-start' })
@@ -174,6 +195,7 @@ export async function present(sourceId: string | null, withAudio = false) {
   }
 }
 export function stopPresent() {
+  presentSource = null
   awaitingPresent = false; clearTimeout(presentTimer)
   if (ui().state?.presenter === ui().me) send({ t: 'present-stop' })
   releaseScreen()

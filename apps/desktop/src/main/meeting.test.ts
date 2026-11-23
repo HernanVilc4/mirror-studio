@@ -94,13 +94,16 @@ describe('roles are validated by the host', () => {
 })
 
 describe('presenting', () => {
-  it('only teachers and up present; a lower rank cannot take over', () => {
+  it('anyone presents; a lower rank cannot take over', () => {
     const { m, mk, boss } = room()
     const p = mk('P'), t = mk('T')
     send(m, boss.id, { t: 'set-role', target: t.id, role: 'teacher' })
     send(m, p.id, { t: 'present-start' })
-    expect(m.state().presenter).toBeNull()
-    send(m, boss.id, { t: 'present-start' })
+    expect(m.state().presenter).toBe(p.id) // a participant may present when the stage is free
+    send(m, boss.id, { t: 'present-start' }) // and the creator may take over
+    expect(m.state().presenter).toBe(boss.id)
+    send(m, p.id, { t: 'present-start' }) // but not the other way round
+    expect(m.state().presenter).toBe(boss.id)
     send(m, t.id, { t: 'present-start' }) // creator outranks teacher
     expect(m.state().presenter).toBe(boss.id)
     send(m, t.id, { t: 'present-stop' })
@@ -108,15 +111,13 @@ describe('presenting', () => {
     send(m, boss.id, { t: 'present-stop' })
     expect(m.state().presenter).toBeNull()
   })
-  it('stops presenting when the presenter leaves or loses the role', () => {
+  it('keeps presenting after losing a role, stops when the presenter leaves', () => {
     const { m, mk, boss } = room()
     const t = mk('T')
     send(m, boss.id, { t: 'set-role', target: t.id, role: 'teacher' })
     send(m, t.id, { t: 'present-start' })
     send(m, boss.id, { t: 'set-role', target: t.id, role: 'participant' })
-    expect(m.state().presenter).toBeNull()
-    send(m, boss.id, { t: 'set-role', target: t.id, role: 'teacher' })
-    send(m, t.id, { t: 'present-start' })
+    expect(m.state().presenter).toBe(t.id)
     m.leave(t.id)
     expect(m.state().presenter).toBeNull()
   })

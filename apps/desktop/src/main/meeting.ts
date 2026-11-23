@@ -105,7 +105,7 @@ export class MeetingHost extends EventEmitter {
         this.broadcast(); break
       }
       case 'present-start': {
-        if (!canPresent(actor.role)) return this.deny(actor, 'Solo docentes y administradores pueden presentar')
+        if (!canPresent(actor.role)) return this.deny(actor, 'No tienes permiso para presentar')
         const cur = this.presenter && this.members.get(this.presenter)
         if (cur && cur.id !== from && rank(actor.role) < rank(cur.role)) return this.deny(actor, `${cur.name} ya está presentando`)
         this.presenter = from; this.broadcast(); break
