@@ -1,46 +1,50 @@
 # Mirror Studio
 
-Retransmisión y control de Android en el escritorio por Wi-Fi local (WebRTC). Monorepo:
+Reuniones, presentación de pantalla y control de PC en **red local por Ethernet**, entre PCs Windows 10/11. Sin Internet. Alternativa local a Meet para laboratorios y aulas. Estado, fases y decisiones: ver `HANDOFF.md`. Red y firewall: `docs/FIREWALL.md`.
 
-- `packages/protocol` — esquemas zod, límites, helpers (fuente de verdad; Android replica el JSON/HMAC).
-- `apps/desktop` — Electron + React + TS + Tailwind. Servidor de señalización (`src/main/signaling.ts`), mDNS (`_mirrorstudio._tcp`), QR, receptor WebRTC en el renderer.
-- `apps/android` — Kotlin + Compose + MediaProjection + WebRTC (`stream-webrtc-android`).
-
-## Arquitectura (resumen)
-
-```
-Android (offerer) --ws:47800 JSON--> Electron main (relay) --IPC--> renderer (RTCPeerConnection answerer)
-Android ==== WebRTC (DTLS-SRTP): video + DataChannel "control" ====> renderer
-```
-
-Emparejamiento: el QR/pantalla muestra `host:port + token` (16 bytes aleatorios, un solo uso, caduca en 5 min).
-El teléfono envía `hello`; el usuario debe **aprobar** en el desktop; offer/answer llevan `sig = HMAC-SHA256(token, sdp)`
-para atar el fingerprint DTLS al secreto del QR (evita MITM en señalización ws:// sin TLS).
-El control (`pointer`, `key`, …) viaja por DataChannel, separado del video. Coordenadas normalizadas 0..1 sobre la imagen
-mostrada (`mapPointToDevice` descuenta el letterbox).
+Monorepo:
+- `packages/protocol`: mensajes (zod), roles y permisos, código de sesión, criptografía del handshake (`src/node.ts`, solo Node).
+- `apps/desktop`: Electron + React + TypeScript + Tailwind.
+  - `main/meeting.ts`: estado autoritativo de la reunión (roles, presentador, control). Valida toda acción.
+  - `main/meeting-net.ts`: servidor y cliente WebSocket con handshake autenticado y canal AES-GCM.
+  - `main/app-session.ts`: une la reunión con la inyección de entrada y garantiza la liberación de teclas.
+  - `main/input.ts`: inyección de ratón y teclado (Windows, vía `SendInput` en un PowerShell persistente).
+  - `main/network.ts`: elección de interfaz Ethernet, descubrimiento y comprobación del firewall.
+  - `renderer/src/media.ts`: concentrador WebRTC del anfitrión (pantalla y sonido de la PC) y conexión de cada participante.
+- Android y móviles: **fuera de alcance** (en los laboratorios no se expone el WiFi a la red Ethernet); su código se eliminó.
 
 ## Comandos
 
 ```
 npm install
-npm test          # protocol + señalización (automáticas)
+npm test            # protocolo + reuniones + red + control (automáticas)
 npm run typecheck
-npm run dev       # desktop (Electron)
+npm run build
+npm run dev         # abre la app
+npm run dist:portable                      # release/Mirror-Studio-win32-x64.zip: descomprimir en Windows y ejecutar
+npm run dist -w @mirror-studio/desktop     # release/Mirror Studio Setup 0.1.0.exe (instalador NSIS)
 ```
-Android: abrir `apps/android` en Android Studio (genera el wrapper de Gradle) y ejecutar.
+
+## Arquitectura
+
+```
+Participante ──ws:47800 (handshake + AES-GCM)──► Anfitrión (MeetingHost valida todo)
+Participante ══ WebRTC (DTLS-SRTP): pantalla + sonido de la PC ══► Concentrador en la ventana del anfitrión
+```
+El anfitrión es el creador; si sale, la reunión termina. El código de reunión (8 caracteres) no viaja por la red: se usa en un intercambio de claves X25519 con confirmación HMAC (ver `packages/protocol/src/node.ts`, con su límite conocido frente a un atacante activo).
 
 ## Estado real
 
 | Elemento | Estado |
 |---|---|
-| Protocolo, validación, mapeo de coordenadas | Hecho, 8 tests |
-| Señalización (pairing QR y sin QR, aprobación, token único, firma SDP, malformados, aislamiento) | Hecho, 5 tests |
-| PC → PC (compartir pantalla a otra instancia, descubrimiento /24) | **Verificado en un solo equipo** (la app se comparte a sí misma por loopback): transmite, ~39 fps, rtt 1 ms, buffer 20 ms, 640x360. No probado entre dos PCs ni en Linux |
-| Descubrimiento por subred en Android | Compila; **no probado** |
-| Android: retransmisión, QR, permisos de inicio, UI animada | Compila (APK debug); **no probado en teléfono** |
-| Control del teléfono (AccessibilityService) | Implementado y compilado; el usuario reporta que **no funcionó** en su prueba. Causa sin identificar; hay diagnóstico en pantalla (contador de órdenes, estado del permiso) |
-| Control PC → PC | No implementado (necesita inyección de input nativa) |
-| scrcpy (Modo B) | No implementado. Referencia: scrcpy es Apache-2.0; inyecta input con un servidor por ADB, sin MediaProjection ni accesibilidad |
-| Linux Wayland/X11, multi-escena, presentación, empaquetado | Pendiente |
-
-Modo de prueba local: la variable de entorno `MS_SELFTEST=1` hace que la app se comparta a sí misma por loopback y se auto-apruebe.
+| Protocolo, roles, permisos, código de sesión | Hecho, probado |
+| Handshake autenticado y canal cifrado (replay, manipulación, impostor, bloqueo por intentos) | Hecho, probado |
+| Sesiones con roles, expulsar, un presentador | Hecho, probado |
+| Control de PC: consentimiento, revocación, liberación de teclas al desconectar | Lógica hecha y probada; **inyección real en Windows sin probar** |
+| Interfaz (inicio, preparación, sala, consentimiento, barra indicadora) | Hecha; verificada con dos instancias de Electron en Linux |
+| Presentación de pantalla (docente → anfitrión) | Verificada en Linux: el anfitrión recibe vídeo 1920×1080 |
+| Sonido de la PC al presentar (sin micrófono) | Enrutamiento verificado en Linux con audio sintético; **captura real del sistema (solo Windows) sin probar** |
+| 35 participantes | Medido en una PC de 12 núcleos: control 146 ms, vídeo ≈37 % de un núcleo; **falta una PC típica de laboratorio y red real** |
+| Paquete portable de Windows | **Generado** (`npm run dist:portable`); sin ejecutar en Windows |
+| Instalador Windows y regla de firewall | **Construido** (98 MB); sin ejecutar en Windows ni firmar |
+| Prueba entre dos PCs reales en Windows | **Pendiente** |

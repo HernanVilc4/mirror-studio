@@ -1,0 +1,25 @@
+# Windows installer (NSIS). Needs `electron-builder` installed: npm i -D electron-builder -w @mirror-studio/desktop
+# Build on Windows (or CI with wine): npm run dist -w @mirror-studio/desktop
+electronVersion: 39.8.10   # pinned: electron-builder cannot resolve the ^39 range in a monorepo (keep equal to the installed version)
+appId: com.mirrorstudio.app
+productName: Mirror Studio
+copyright: Mirror Studio
+directories:
+  output: ../../release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  # Code signing: set CSC_LINK / CSC_KEY_PASSWORD in the build environment. Unsigned builds show a SmartScreen warning.
+nsis:
+  oneClick: false
+  perMachine: true          # installs for all users; needs admin once, which the firewall rule also needs
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh

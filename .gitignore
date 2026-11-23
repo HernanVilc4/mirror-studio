@@ -3,3 +3,7 @@ out
 .gradle
 build
 local.properties
+release
+.vitest-cache
+*.log
+!apps/desktop/build

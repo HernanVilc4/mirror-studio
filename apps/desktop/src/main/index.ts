@@ -1,72 +1,110 @@
-import { app, BrowserWindow, ipcMain, session, desktopCapturer } from 'electron'
+import { app, BrowserWindow, Menu, globalShortcut, ipcMain, screen, session, desktopCapturer, shell } from 'electron'
 import { join } from 'node:path'
-import { networkInterfaces, hostname } from 'node:os'
-import { Bonjour } from 'bonjour-service'
-import QRCode from 'qrcode'
-import { SignalingServer } from './signaling'
-import { scanLan, PORT as DEFAULT_PORT } from './discovery'
-import type { PairingPayload } from '@mirror-studio/protocol'
+import { hostname } from 'node:os'
+import { ClientMessage, DEFAULT_PORT, isValidCode, normalizeCode } from '@mirror-studio/protocol'
+import { AppSession, type UiEvent } from './app-session'
+import { createDriver } from './input'
+import { firewallCommand, firewallStatus, listInterfaces, pickInterface, scanLan } from './network'
 
-const PORT = DEFAULT_PORT
-// Linux: PipeWire screen capture (Wayland) and hardware video decode for a faster viewer. Unverified on real Linux.
-if (process.platform === 'linux') app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer,VaapiVideoDecoder')
-const signaling = new SignalingServer()
+// Show real LAN addresses in WebRTC candidates. Without this Chromium hides them behind mDNS names that
+// lab networks often do not resolve, and media never connects.
+app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns')
+
 let win: BrowserWindow | null = null
-let bonjour: Bonjour | null = null
+const emit = (e: UiEvent) => win?.webContents.send('ui', e)
 
-function lanIps(): string[] {
-  const out: string[] = []
-  for (const list of Object.values(networkInterfaces()))
-    for (const i of list ?? []) if (i.family === 'IPv4' && !i.internal) out.push(i.address)
-  return out
+/** Emergency stop for the person being controlled. Works even when the app window is not focused. */
+const PANIC_KEY = 'CommandOrControl+Alt+Escape'
+let banner: BrowserWindow | null = null
+
+/**
+ * While someone controls this PC an always-on-top bar says so and offers a stop button. It is a separate
+ * window, so it stays visible over the controller's view and cannot be minimized with the main window.
+ */
+function onControlled(by: { id: string; name: string } | null) {
+  if (!by) {
+    globalShortcut.unregister(PANIC_KEY)
+    banner?.destroy(); banner = null
+    return
+  }
+  globalShortcut.register(PANIC_KEY, () => meeting.send({ t: 'control-revoke', other: by.id }))
+  const { width } = screen.getPrimaryDisplay().workAreaSize
+  banner?.destroy()
+  const b = (banner = new BrowserWindow({
+    width: 520, height: 52, x: Math.round((width - 520) / 2), y: 0, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
+    closable: false, alwaysOnTop: true, skipTaskbar: true, focusable: true, show: false, backgroundColor: '#7c2d12',
+    webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true }
+  }))
+  b.setAlwaysOnTop(true, 'screen-saver')
+  const hash = `banner=${encodeURIComponent(by.name)}&id=${encodeURIComponent(by.id)}`
+  if (process.env.ELECTRON_RENDERER_URL) b.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${hash}`)
+  else b.loadFile(join(__dirname, '../renderer/index.html'), { hash })
+  b.once('ready-to-show', () => b.showInactive())
+  b.webContents.on('will-navigate', (e) => e.preventDefault())
 }
-const lanIp = () => lanIps()[0] ?? '127.0.0.1'
-const send = (ch: string, ...a: unknown[]) => win?.webContents.send(ch, ...a)
 
-async function createInvite() {
-  const payload: PairingPayload = { v: 1, host: lanIp(), port: PORT, token: signaling.newInvite(), name: hostname() }
-  return { payload, ips: lanIps(), qr: await QRCode.toDataURL(JSON.stringify(payload), { margin: 1, width: 320 }) }
-}
+const meeting = new AppSession(createDriver(), emit, undefined, onControlled)
 
-app.whenReady().then(async () => {
+/** Source chosen in the "Presentar" picker. null = primary screen (also used for PC control). */
+let pickedSource: string | null = null
+/** Share this PC's sound too. Electron can capture system audio (loopback) on Windows only. */
+let wantAudio = false
+// MS_TEST_AUDIO=1 only lets the automated test enable the checkbox on Linux (its capture is faked there).
+const SYSTEM_AUDIO = process.platform === 'win32' || process.env.MS_TEST_AUDIO === '1'
+
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null) // no File/Edit/View bar: this is a call window, not a document editor
   win = new BrowserWindow({
-    width: 1280, height: 800, backgroundColor: '#111317', title: 'Mirror Studio',
+    autoHideMenuBar: true, icon: join(__dirname, '../../build/icon.png'), width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: '#111317', title: 'Mirror Studio',
     webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true }
   })
+  // Links never navigate the app window.
+  win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' } })
+  win.webContents.on('will-navigate', (e) => e.preventDefault())
   if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else win.loadFile(join(__dirname, '../renderer/index.html'))
 
-  // getDisplayMedia() in the renderer: share the primary screen (on Wayland the OS portal asks the user).
+  // getDisplayMedia() in the renderer: share the source picked in the app, or the primary screen.
   session.defaultSession.setDisplayMediaRequestHandler(async (_req, cb) => {
-    const [screen] = await desktopCapturer.getSources({ types: ['screen'] })
-    cb(screen ? { video: screen } : {})
+    const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] })
+    const chosen = (pickedSource && sources.find((s) => s.id === pickedSource)) || sources.find((s) => s.id.startsWith('screen:')) || sources[0]
+    cb(chosen ? { video: chosen, ...(wantAudio && SYSTEM_AUDIO ? { audio: 'loopback' as const } : {}) } : {})
   })
-  await signaling.start(PORT)
-  // mDNS: phones browse _mirrorstudio._tcp. The token is NOT advertised (only in the QR).
-  bonjour = new Bonjour()
-  bonjour.publish({ name: `Mirror Studio (${hostname()})`, type: 'mirrorstudio', port: PORT, txt: { v: '1' } })
+  // No microphone and no camera: the only thing the window may capture is the screen it was asked to share.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'display-capture'))
 
-  signaling.on('pairing-request', (r) => send('pairing-request', r))
-  signaling.on('offer', (id, sdp) => send('offer', id, sdp))
-  signaling.on('ice', (id, m) => send('ice', id, m))
-  signaling.on('closed', (id) => send('closed', id))
+  ipcMain.handle('net-info', async () => {
+    const ifaces = listInterfaces()
+    const chosen = pickInterface(ifaces)
+    const exe = app.getPath('exe')
+    return { ifaces, chosen: chosen?.address ?? null, port: DEFAULT_PORT, firewall: await firewallStatus(exe), firewallCommand: firewallCommand(exe), controllable: meeting.canBeControlled, systemAudio: SYSTEM_AUDIO, name: hostname() }
+  })
+  ipcMain.handle('discover', () => scanLan(DEFAULT_PORT))
 
-  // Selftest only: dump the app's own contents (not the desktop) so the PC-to-PC path can be inspected.
-  if (['1', '2'].includes(process.env.MS_SELFTEST ?? '')) setTimeout(async () => { win!.restore(); win!.showInactive(); await new Promise((r) => setTimeout(r, 1500)); const img = await win!.webContents.capturePage(); (await import('node:fs')).writeFileSync(process.env.MS_SELFTEST_OUT ?? 'selftest.png', img.toPNG()) }, Number(process.env.MS_SELFTEST_DELAY ?? 14000))
-  ipcMain.handle('invite', createInvite)
-  ipcMain.handle('discover', scanLan)
-  ipcMain.handle('host-info', () => ({ name: hostname(), model: process.platform }))
-  ipcMain.handle('selftest', () => ['1', '2'].includes(process.env.MS_SELFTEST ?? ''))
-  ipcMain.handle('selftest-loop', () => process.env.MS_SELFTEST === '1')
-  ipcMain.handle('approve', (_e, id: string) => signaling.approve(id))
-  ipcMain.handle('reject', (_e, id: string) => signaling.reject(id))
-  ipcMain.handle('close', (_e, id: string) => signaling.close(id))
-  ipcMain.handle('answer', (_e, id: string, sdp: string) => signaling.sendAnswer(id, sdp))
-  ipcMain.handle('ice', (_e, id: string, ice: object) => signaling.sendIce(id, ice))
+  ipcMain.handle('host', async (_e, meetingName: unknown, myName: unknown) => {
+    if (typeof meetingName !== 'string' || typeof myName !== 'string') throw new Error('Datos inválidos')
+    const r = await meeting.host(meetingName, myName.slice(0, 64) || hostname(), DEFAULT_PORT)
+    const ifaces = listInterfaces()
+    return { code: r.code, port: r.port, ips: ifaces.map((i) => i.address), ip: pickInterface(ifaces)?.address ?? null }
+  })
+  ipcMain.handle('join', async (_e, ip: unknown, port: unknown, code: unknown, myName: unknown) => {
+    if (typeof ip !== 'string' || !/^[\w.:-]{1,253}$/.test(ip) || typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Dirección inválida')
+    if (typeof code !== 'string' || !isValidCode(code)) throw new Error('El código debe tener 8 caracteres (letras y números, sin 0, 1, I ni O)')
+    await meeting.join(ip, port, normalizeCode(code), typeof myName === 'string' && myName ? myName.slice(0, 64) : hostname())
+  })
+  // Everything coming from the window is validated again here: the renderer is not trusted.
+  ipcMain.handle('send', (_e, msg: unknown) => {
+    const p = ClientMessage.safeParse(msg)
+    if (p.success) meeting.send(p.data)
+  })
+  ipcMain.handle('rtc-out', (_e, to: unknown, kind: unknown, data: unknown) => {
+    if (typeof to === 'string' && (kind === 'offer' || kind === 'answer' || kind === 'ice') && typeof data === 'string' && data.length < 32768) meeting.rtcOut(to, kind, data)
+  })
+  ipcMain.handle('leave', () => meeting.leave())
+  ipcMain.handle('sources', async () =>
+    (await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 }, fetchWindowIcons: false }))
+      .map((s) => ({ id: s.id, name: s.name, type: s.id.startsWith('screen:') ? 'screen' : 'window', thumb: s.thumbnail.toDataURL() })))
+  ipcMain.handle('pick-source', (_e, id: unknown, audio: unknown) => { pickedSource = typeof id === 'string' ? id : null; wantAudio = audio === true })
 })
 
-app.on('window-all-closed', () => {
-  bonjour?.unpublishAll(() => bonjour?.destroy())
-  signaling.stop()
-  app.quit()
-})
+app.on('window-all-closed', () => { meeting.dispose(); globalShortcut.unregisterAll(); app.quit() })

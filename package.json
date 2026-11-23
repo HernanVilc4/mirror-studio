@@ -1,11 +1,15 @@
 {
   "name": "mirror-studio",
   "private": true,
-  "workspaces": ["packages/*", "apps/desktop"],
+  "workspaces": [
+    "packages/*",
+    "apps/desktop"
+  ],
   "scripts": {
     "dev": "npm run dev -w @mirror-studio/desktop",
     "build": "npm run build -w @mirror-studio/protocol && npm run build -w @mirror-studio/desktop",
     "test": "npm test -w @mirror-studio/protocol && npm test -w @mirror-studio/desktop",
-    "typecheck": "npm run typecheck -w @mirror-studio/desktop"
+    "typecheck": "npm run typecheck -w @mirror-studio/desktop",
+    "dist:portable": "npm run build && node apps/desktop/scripts/package-win.cjs"
   }
 }

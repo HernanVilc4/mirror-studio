@@ -1,0 +1,31 @@
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d')
+let t = 0
+setInterval(() => { // moving text + noise-like blocks: closer to a slide being scrolled than a flat color
+  t++; g.fillStyle = '#fff'; g.fillRect(0, 0, 1920, 1080); g.fillStyle = '#123'; g.font = '40px monospace'
+  for (let i = 0; i < 24; i++) g.fillText('Mirror Studio load test line ' + (i + t % 50) + ' ' + 'lorem ipsum dolor sit amet'.repeat(2), 40, 50 + i * 42)
+  g.fillStyle = '#e33'; g.fillRect((t * 17) % 1800, 900, 120, 120)
+}, 33)
+const src = c.captureStream(15).getVideoTracks()[0]
+let pairs = []
+window.start = async (n) => {
+  window.stop()
+  for (let i = 0; i < n; i++) {
+    const a = new RTCPeerConnection(), b = new RTCPeerConnection()
+    a.onicecandidate = (e) => e.candidate && b.addIceCandidate(e.candidate); b.onicecandidate = (e) => e.candidate && a.addIceCandidate(e.candidate)
+    const tr = a.addTransceiver(src, { direction: 'sendonly' })
+    await a.setLocalDescription(await a.createOffer()); await b.setRemoteDescription(a.localDescription)
+    await b.setLocalDescription(await b.createAnswer()); await a.setRemoteDescription(b.localDescription)
+    const p = tr.sender.getParameters(); p.encodings = [{ ...(p.encodings[0] || {}), maxBitrate: 2500000, maxFramerate: 15 }]; await tr.sender.setParameters(p)
+    pairs.push({ a, b })
+  }
+}
+window.stop = () => { pairs.forEach(({ a, b }) => { a.close(); b.close() }); pairs = [] }
+window.report = async () => {
+  let fps = [], kbps = [], codec = ''
+  for (const { a } of pairs) for (const r of (await a.getStats()).values()) if (r.type === 'outbound-rtp' && r.kind === 'video') { fps.push(r.framesPerSecond || 0); kbps.push((r.bytesSent * 8) / 1000 / 14); codec = r.encoderImplementation || '' }
+  const avg = (x) => x.length ? (x.reduce((s, v) => s + v, 0) / x.length).toFixed(1) : '0'
+  return `avg_fps=${avg(fps)} min_fps=${Math.min(...fps).toFixed(0)} encoder=${codec}`
+}
+</script>
