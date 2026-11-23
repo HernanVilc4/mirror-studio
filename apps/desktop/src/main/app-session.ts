@@ -26,7 +26,8 @@ export class AppSession {
   private client?: MeetingClient
   private input: RemoteInput
   private me = ''
-  private ended = false
+  /** True when there is no meeting to end: closing the app outside a meeting must not report a 'closed' meeting. */
+  private ended = true
   private names = new Map<string, string>()
   private healthTimer: ReturnType<typeof setInterval> | null = null
   private probing = false

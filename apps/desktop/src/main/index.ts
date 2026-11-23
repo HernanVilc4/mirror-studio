@@ -28,7 +28,10 @@ app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns')
 
 let win: BrowserWindow | null = null
 // Local notices also go to the always-on-top control bar: the main window may be hidden behind what they talk about.
-const emit = (e: UiEvent) => { win?.webContents.send('ui', e); if (e.t === 'notice') banner?.webContents.send('ui', e) }
+// A closed window is destroyed, not null: touching its webContents throws "Object has been destroyed" (an error
+// box on quit, because closing the app ends the meeting and that sends one last 'closed' event).
+const alive = (w: BrowserWindow | null): w is BrowserWindow => !!w && !w.isDestroyed()
+const emit = (e: UiEvent) => { if (alive(win)) win.webContents.send('ui', e); if (e.t === 'notice' && alive(banner)) banner.webContents.send('ui', e) }
 
 /** Emergency stop for the person being controlled. Works even when the app window is not focused. */
 const PANIC_KEY = 'CommandOrControl+Alt+Escape'
@@ -83,7 +86,7 @@ app.whenReady().then(() => {
   }))
   const onTheme = () => { if (w.isDestroyed()) return; paintWindow(w); w.setIcon(windowIcon()); w.webContents.send('theme', themeInfo()) }
   nativeTheme.on('updated', onTheme) // OS switched light/dark (Windows or Ubuntu), or the user picked a theme
-  w.on('closed', () => nativeTheme.off('updated', onTheme))
+  w.on('closed', () => { nativeTheme.off('updated', onTheme); win = null })
   ipcMain.handle('theme', () => themeInfo())
   ipcMain.handle('set-theme', (_e, source: unknown) => { if (isThemeSource(source)) setTheme(source); return themeInfo() })
   // Links never navigate the app window.

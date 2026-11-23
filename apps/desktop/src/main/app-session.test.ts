@@ -215,3 +215,18 @@ describe('health of a controlled PC', () => {
     expect(luis.of('control-input')).toHaveLength(0)
   })
 })
+
+// Regression: closing the app outside a meeting reported a 'closed' meeting to a window that was already
+// destroyed, and Electron showed "Object has been destroyed" on every quit.
+describe('cerrar la aplicación', () => {
+  it('sin reunión no envía ningún aviso', () => {
+    const { s, events } = make()
+    s.dispose()
+    expect(events).toEqual([])
+  })
+  it('en una reunión avisa una sola vez de que terminó', async () => {
+    const { prof } = await lab()
+    prof.s.dispose(); prof.s.dispose()
+    expect(prof.events.filter((e) => e.t === 'closed')).toHaveLength(1)
+  })
+})
