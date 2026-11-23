@@ -55,7 +55,7 @@ Al entrar a una reunión se abre la sala. En la PC anfitriona, arriba están la 
 
 1. Abre Mirror Studio y crea una reunión.
 
-Al abrir la aplicación aparece la pantalla de inicio. En **Te verán como** (1) escribe tu nombre. Desde aquí puedes pulsar **Crear reunión** (2), usar **Unirse con IP y código** (3) o elegir una de las **Reuniones en tu red** (4).
+Al abrir la aplicación, la marca MirrorStudio aparece un instante y se coloca en la cabecera; luego queda la pantalla de inicio. En **Te verán como** (1) escribe tu nombre. Desde aquí puedes pulsar **Crear reunión** (2), usar **Unirse con IP y código** (3) o elegir una de las **Reuniones en tu red** (4).
 
 [captura 01-inicio]
 
@@ -170,6 +170,12 @@ El botón de participantes (1), arriba a la derecha, oculta el panel para ver la
 Para salir de la reunión pulsa **Salir** (1). Si eres el creador, el botón dice **Terminar** y cierra la reunión para todos.
 
 [captura 25-salir]
+
+10. Cambia el tema de la aplicación.
+
+Arriba a la derecha está el tema. El botón con el nombre de tu sistema (1), por ejemplo **Windows 11** o **Ubuntu**, hace que Mirror Studio siga el modo claro u oscuro del sistema. El interruptor (2) elige a mano el tema claro (sol) o el oscuro (luna). La aplicación recuerda tu elección.
+
+[captura 28-tema]
 
 Si otras PCs no pueden unirse, en la pantalla de inicio pulsa **Ayuda de red**. La ventana **Red y firewall** muestra el comando para permitir Mirror Studio en el firewall (1); cópialo y ejecútalo una vez en PowerShell abierto como administrador. Luego pulsa **Cerrar** (2).
 
