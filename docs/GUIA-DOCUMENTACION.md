@@ -134,7 +134,7 @@ Solo cambia el **contenido**: de PushProMaster a Mirror Studio. Las plantillas t
 
 No se incluyen los archivos `*.test.ts`, `node_modules`, `out` ni `release`.
 
-## 4. Capturas del Manual de Uso con Claude Code (computer use)
+## 4. Capturas del Manual de Uso con computer use (GPT o Claude)
 
 El manual se hace **usando la app de verdad**. El Claude Code de la PC del compañero (PC B) usa *computer use* para manejar su ventana de Mirror Studio contra la otra PC (PC A, anfitrión), sigue cada flujo y saca las capturas. Luego las marca con círculos, óvalos o bordes punteados numerados, para que el manual explique dónde pulsar en cada paso.
 
@@ -173,55 +173,11 @@ python docs/tools/anotar.py docs/manual/capturas/01-inicio.png docs/manual/anota
 - La marca rodea el elemento sin taparlo. Las coordenadas son píxeles de la captura.
 - No añadir flechas, textos ni colores distintos dentro de la imagen. Todas llevan el mismo rojo y grosor.
 
-### 4.3 Plan de capturas por flujo
+### 4.3 Lista de capturas y prompt (vigente)
 
-| N.º | Flujo | PC | Estado de la pantalla | Marcas |
-|---|---|---|---|---|
-| 01 | Inicio | B | Pantalla de inicio con la reunión de A en la lista | rect: «Te verán como»; óvalo: Crear reunión; rect: Unirse con IP y código; rect: Reuniones en tu red |
-| 02 | Inicio | B | Pie de la ventana | rect: Red; rect: Firewall; círculo: Ayuda de red |
-| 03 | Crear reunión | A | Tarjeta «Crear reunión» con un nombre escrito | rect: nombre; óvalo: Crear reunión |
-| 04 | Crear reunión | A | Pantalla de preparación | rect: Tu nombre; óvalo: Crear y entrar |
-| 05 | Crear reunión | A | Sala recién creada | rect: IP; rect: Código; círculo: copiar IP y código; círculo: participantes |
-| 06 | Unirse | B | Lista de reuniones | óvalo: Unirse |
-| 07 | Unirse | B | «Unirse con IP y código» con la IP escrita | rect: IP; óvalo: Continuar |
-| 08 | Unirse | B | Preparación con el código escrito | rect: Código; óvalo: Entrar |
-| 09 | Unirse | B | Código incorrecto | rect: mensaje de error |
-| 10 | Unirse | B | Sala con 2 personas | rect: panel de participantes; rect: barra de controles |
-| 11 | Presentar | B | Barra inferior | círculo: Presentar |
-| 12 | Presentar | B | Selector «¿Qué quieres presentar?» | óvalo: Pantalla principal; rect: ventanas; círculo: casilla de sonido |
-| 13 | Presentar | A | Viendo la presentación de B (ratón encima) | rect: presentación; círculo: pantalla completa |
-| 14 | Presentar | B | Su propia presentación (espejo) | rect: vista; círculo: ojo (ocultar) |
-| 15 | Presentar | B | Espejo oculto | óvalo: Ver lo que presento |
-| 16 | Presentar | B | Barra inferior presentando | círculo: Detener |
-| 17 | Roles | A | Menú ⋮ de B abierto | círculo: ⋮; rect: opciones |
-| 18 | Control | A | Menú ⋮ → «Pedir control de su PC» | rect: opción |
-| 19 | Control | B | Diálogo «Solicitud de control» | óvalo: Rechazar; óvalo: Permitir |
-| 20 | Control | B | Barra roja arriba mientras lo controlan | rect: barra; óvalo: Detener control |
-| 21 | Control | A | Vista de control de la PC de B | rect: barra flotante; círculo: pantalla completa; círculo: ✕ |
-| 22 | Control | A | Panel «Controlando» | rect: panel; óvalo: Detener |
-| 23 | Control | B | Aviso «Control finalizado» | rect: aviso |
-| 24 | Sala | A | Panel de participantes oculto | círculo: participantes |
-| 25 | Salir | A/B | Barra inferior | círculo: Salir o Terminar |
-| 26 | Ayuda | B | Ventana «Red y firewall» | rect: comando del firewall; óvalo: Cerrar |
+La lista de capturas, lo que marca cada una y el prompt listo para pegar en GPT o Claude con computer use están en **`docs/manual/PROMPT-GPT-CAPTURAS.md`**. Esa lista sale del texto real del manual (`docs/manual/textos.md`): los números (1), (2)… del texto son los de las marcas. Incluye la 28, el tema, añadida con la identidad «Doble Erre».
 
-Cada captura va en la sección **5. Flujo de Uso Paso a Paso** del manual, en este orden. Debajo va un párrafo corto que explica el paso citando los números de las marcas, igual que la plantilla pone texto y luego imagen. Las capturas 01, 02 y 05 sirven también para **4. Interfaz Principal**.
-
-### 4.4 Prompt para el Claude Code de la PC B
-
-```
-Lee docs/GUIA-DOCUMENTACION.md (secciones 2 y 4) y docs/GUIA-PRUEBAS-LAN.md.
-Con computer use, maneja la ventana de Mirror Studio de esta PC (ya abierta con npm run dev),
-conectada a la reunión de la PC anfitriona (IP y código: te los doy yo).
-Sigue el plan de la sección 4.3 en orden. Para cada fila:
-  1) deja la pantalla en el estado indicado (si hace falta algo en la otra PC, detente y pídemelo),
-  2) toma la captura y guárdala en docs/manual/capturas/NN-flujo-paso.png,
-  3) márcala con python docs/tools/anotar.py según la columna «Marcas», usando las coordenadas
-     de la propia captura, y guárdala en docs/manual/anotadas/,
-  4) abre la imagen marcada y comprueba que cada marca rodea el elemento correcto sin taparlo.
-Al terminar, escribe en docs/manual/textos.md el texto de cada paso (sección 5 del manual) citando
-los números de las marcas. No toques los .docx: el Word lo arma una persona copiando la plantilla,
-sin cambiar su formato (sección 2).
-```
+El Word se arma solo con `python docs/tools/armar_manual.py`: parte de la plantilla, pone el texto y las capturas de `docs/manual/anotadas/` y avisa de las que falten.
 
 ## Antes de entregar
 
