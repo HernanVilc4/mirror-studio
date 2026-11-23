@@ -105,24 +105,32 @@ public static class MS {
   [DllImport("user32.dll", SetLastError=true)] static extern uint SendInput(uint n, INPUT[] i, int size);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   static void Send(INPUT i) { SendInput(1, new INPUT[]{ i }, Marshal.SizeOf(typeof(INPUT))); }
-  public static void Mouse(int dx, int dy, uint data, uint flags) { var i = new INPUT(); i.type = 0; i.u.mi.dx = dx; i.u.mi.dy = dy; i.u.mi.mouseData = data; i.u.mi.dwFlags = flags; Send(i); }
+  // data is signed on purpose: a wheel scroll down is negative (-120). Casting that to uint in PowerShell throws.
+  public static void Mouse(int dx, int dy, int data, uint flags) { var i = new INPUT(); i.type = 0; i.u.mi.dx = dx; i.u.mi.dy = dy; i.u.mi.mouseData = unchecked((uint)data); i.u.mi.dwFlags = flags; Send(i); }
   public static void Key(ushort vk, ushort scan, uint flags) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = scan; i.u.ki.dwFlags = flags; Send(i); }
 }
 "@
 [void][MS]::SetProcessDPIAware()  # without it, scaled displays get virtualized coordinates
 $lx = 0; $ly = 0
 while (($line = [Console]::In.ReadLine()) -ne $null) {
-  $p = $line.Split(' ')
-  switch ($p[0]) {
-    'M' { $lx = [int]$p[1]; $ly = [int]$p[2]; [MS]::Mouse($lx, $ly, 0, 0x8001) }  # MOVE | ABSOLUTE (0..65535)
-    'B' { $f = [uint32]$p[1]; if (($f -band 0x2a) -ne 0) { [MS]::Mouse($lx, $ly, 0, 0x8001); Start-Sleep -Milliseconds 40 }; [MS]::Mouse(0, 0, 0, $f) }  # a press waits so the window sees the hover first (title-bar buttons need it)
-    'W' { if ([int]$p[2] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[2]), 0x0800) }; if ([int]$p[1] -ne 0) { [MS]::Mouse(0, 0, [uint32]([int]$p[1]), 0x1000) } }
-    'K' { [MS]::Key([uint16]$p[1], 0, [uint32]$p[2]) }                           # flags: 1 = extended, 2 = key up
-    'T' { foreach ($c in [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[1])).ToCharArray()) { [MS]::Key(0, [uint16]$c, 4); [MS]::Key(0, [uint16]$c, 6) } }
-    'Q' { break }
-  }
+  # One bad line must never kill the helper: with 'Stop' an uncaught error ends the script and every later
+  # event would be silently dropped while the video keeps flowing (the "my pointer stopped working" bug).
+  try {
+    $p = $line.Split(' ')
+    switch ($p[0]) {
+      'M' { $lx = [int]$p[1]; $ly = [int]$p[2]; [MS]::Mouse($lx, $ly, 0, 0x8001) }  # MOVE | ABSOLUTE (0..65535)
+      'B' { $f = [uint32]$p[1]; if (($f -band 0x2a) -ne 0) { [MS]::Mouse($lx, $ly, 0, 0x8001); Start-Sleep -Milliseconds 40 }; [MS]::Mouse(0, 0, 0, $f) }  # a press waits so the window sees the hover first (title-bar buttons need it)
+      'W' { if ([int]$p[2] -ne 0) { [MS]::Mouse(0, 0, [int]$p[2], 0x0800) }; if ([int]$p[1] -ne 0) { [MS]::Mouse(0, 0, [int]$p[1], 0x1000) } }
+      'K' { [MS]::Key([uint16]$p[1], 0, [uint32]$p[2]) }                             # flags: 1 = extended, 2 = key up
+      'T' { foreach ($c in [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[1])).ToCharArray()) { [MS]::Key(0, [uint16]$c, 4); [MS]::Key(0, [uint16]$c, 6) } }
+      'Q' { exit 0 }                                                                 # 'break' would only leave the switch
+    }
+  } catch { [Console]::Error.WriteLine("input '$line': $($_.Exception.Message)") }
 }
 `
+
+/** The helper script, exported for the Windows-only test. */
+export const INPUT_HELPER_SCRIPT = PS_SCRIPT
 
 const BUTTON_FLAGS = { left: [0x0002, 0x0004], right: [0x0008, 0x0010], middle: [0x0020, 0x0040] } as const
 
@@ -130,11 +138,26 @@ export function createWindowsDriver(): InputDriver {
   const dir = mkdtempSync(join(tmpdir(), 'mirror-studio-'))
   const file = join(dir, 'input.ps1')
   writeFileSync(file, PS_SCRIPT, 'utf8')
-  let ps: ChildProcessWithoutNullStreams | null = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file], { windowsHide: true })
-  ps.on('error', () => { ps = null })
-  ps.on('exit', () => { ps = null })
-  ps.stdin.on('error', () => { /* helper died: later calls become no-ops */ })
-  const line = (s: string) => { try { ps?.stdin.write(s + '\n') } catch { /* helper gone */ } }
+  let ps: ChildProcessWithoutNullStreams | null = null
+  let disposed = false
+  let startedAt = 0
+  const start = () => {
+    startedAt = Date.now()
+    const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file], { windowsHide: true })
+    p.on('error', (e) => { console.error('[input] helper failed to start:', e.message); if (ps === p) ps = null })
+    p.on('exit', (code) => { if (ps === p) ps = null; if (!disposed) console.error(`[input] helper exited (${code}); it restarts on the next event`) })
+    p.stdin.on('error', () => { /* helper gone: the next event restarts it */ })
+    p.stderr.on('data', (d) => console.error('[input]', String(d).trim()))
+    return p
+  }
+  ps = start()
+  const line = (s: string) => {
+    if (disposed) return
+    // Never stay dead: a crashed helper used to drop all remote input until the app restarted.
+    // At most one restart every 2 s, so a missing powershell.exe cannot cause a spawn storm.
+    if (!ps && Date.now() - startedAt > 2000) ps = start()
+    try { ps?.stdin.write(s + '\n') } catch { /* helper gone */ }
+  }
   const drv: InputDriver = {
     supported: true,
     mouseMove: (x, y) => line(`M ${Math.round(x * 65535)} ${Math.round(y * 65535)}`),
@@ -143,7 +166,7 @@ export function createWindowsDriver(): InputDriver {
     wheel: (dx, dy) => line(`W ${Math.trunc(dx)} ${Math.trunc(-dy)}`),
     key: (vk, ext, down) => line(`K ${vk} ${(ext ? 1 : 0) | (down ? 0 : 2)}`),
     text: (s) => line(`T ${Buffer.from(s, 'utf8').toString('base64')}`),
-    dispose: () => { try { ps?.stdin.end('Q\n') } catch { /* ignore */ } ps?.kill(); ps = null; try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ } }
+    dispose: () => { disposed = true; try { ps?.stdin.end('Q\n') } catch { /* ignore */ } ps?.kill(); ps = null; try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ } }
   }
   return drv
 }

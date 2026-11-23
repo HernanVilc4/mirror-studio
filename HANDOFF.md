@@ -50,6 +50,21 @@ npm run dev                                # electron-vite
 - `docs/GUIA-PRUEBAS-LAN.md`: guía de pruebas generales en red local (29 pruebas). La sección 5.4 cubre los escenarios que fallaban.
 - `docs/GUIA-DOCUMENTACION.md`: cómo un compañero hace los 3 documentos (Para ejecutar, Manual de uso, Código fuente) **copiando las plantillas `.docx` de PushProMaster que están en `docs/`**, con el mismo formato y solo el contenido adaptado.
 - Firewall de la PC Windows de pruebas: además de la regla del puerto, hay una regla por programa `Mirror Studio (dev)` para `node_modules\electron\dist\electron.exe` (TCP y UDP, Privada y Dominio).
+- La sección 4 de `GUIA-DOCUMENTACION.md` explica cómo hacer las capturas del manual:
+  - el Claude Code de la otra PC usa computer use, siguiendo un plan de 26 capturas por flujo
+  - las marcas (círculo, óvalo o borde punteado rojos y numerados) las dibuja `docs/tools/anotar.py` (`--test` lo comprueba)
+  - referencia del resultado: `docs/tools/ejemplo-anotacion.png`
+
+### Control remoto que dejaba de responder (arreglado el 23-nov)
+- **Síntoma:** al controlar una PC Windows, el puntero dejaba de actuar a los pocos segundos, pero el vídeo seguía.
+- **Causa:** en el ayudante de PowerShell (`input.ts`), la rueda hacia abajo envía `-120`. `[uint32](-120)` lanza una excepción y, con `$ErrorActionPreference='Stop'`, el script moría. Desde ahí se perdía toda entrada remota hasta reiniciar la app, porque el ayudante se crea una sola vez.
+- **Arreglo:**
+  - la rueda pasa `int` a C# (`unchecked((uint)data)`)
+  - cada comando va en `try/catch`, con el error a stderr, que se ve en la terminal como `[input] …`
+  - el ayudante se relanza solo si muere, como mucho una vez cada 2 s
+  - `Q` usa `exit 0`; antes era `break`, que solo salía del `switch`
+- **Test de regresión** solo para Windows en `input.test.ts`: el script viejo sale con código 1 y el nuevo con 0.
+- **Falta probar en vivo:** controlar desde la otra PC usando la rueda arriba y abajo, clics y teclado durante más de un minuto.
 
 ### Último arreglo (subido el 23-nov, sin probar aún entre dos PCs)
 - **Fallo reproducido:** A presenta, B le pide control, B deja el control → A queda «presentando» sin enviar imagen. B ve el último fotograma congelado, con la barra roja.

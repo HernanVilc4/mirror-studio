@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { RemoteInput, KEYMAP, type InputDriver } from './input'
+import { RemoteInput, KEYMAP, INPUT_HELPER_SCRIPT, type InputDriver } from './input'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 function fake(supported = true) {
   const calls: string[] = []
@@ -79,4 +83,18 @@ describe('RemoteInput', () => {
     r.dispose()
     expect(calls).toEqual(['btn right up', 'dispose'])
   })
+})
+
+// Regression: a wheel scroll down (-120) used to throw inside the PowerShell helper, which then died and
+// silently dropped every later remote event while the video kept flowing. Malformed lines must be survived too.
+describe.runIf(process.platform === 'win32')('Windows input helper', () => {
+  it('survives bad lines and quits cleanly on Q (sends no real input)', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'ms-input-')), 'input.ps1')
+    writeFileSync(file, INPUT_HELPER_SCRIPT, 'utf8')
+    const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file],
+      { input: 'M abc def\nK notanumber 0\nW 0 0\nQ\n', encoding: 'utf8', timeout: 60_000, windowsHide: true })
+    expect(r.status).toBe(0) // reached Q: the bad lines did not kill it
+    expect(r.stderr).toContain("input 'M abc def'")
+    expect(r.stderr).toContain("input 'K notanumber 0'")
+  }, 70_000)
 })

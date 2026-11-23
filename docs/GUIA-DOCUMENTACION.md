@@ -134,6 +134,95 @@ Solo cambia el **contenido**: de PushProMaster a Mirror Studio. Las plantillas t
 
 No se incluyen los archivos `*.test.ts`, `node_modules`, `out` ni `release`.
 
+## 4. Capturas del Manual de Uso con Claude Code (computer use)
+
+El manual se hace **usando la app de verdad**. El Claude Code de la PC del compañero (PC B) usa *computer use* para manejar su ventana de Mirror Studio contra la otra PC (PC A, anfitrión), sigue cada flujo y saca las capturas. Luego las marca con círculos, óvalos o bordes punteados numerados, para que el manual explique dónde pulsar en cada paso.
+
+Si su Claude Code no tiene computer use, se sigue el mismo plan con capturas manuales (Win+Mayús+S) y el mismo script de marcas.
+
+### 4.1 Preparación
+
+- Las dos PCs con `git pull` hecho y la app abierta (`npm run dev`), en la misma red (ver `GUIA-PRUEBAS-LAN.md`).
+- **PC A:** crea la reunión y hace lo que se le pida (aceptar control, presentar…). La maneja una persona.
+- **PC B:** la maneja Claude Code. Cuando un paso necesite a la PC A, se detiene y lo pide por el chat.
+- Ventana de Mirror Studio **maximizada**, escalado de Windows al 100 %, sin otras notificaciones encima.
+- Nombres reales y cortos: «Docente», «Alumno 1». No usar datos personales en las capturas.
+- Carpetas:
+  - `docs/manual/capturas/`: capturas sin marcar
+  - `docs/manual/anotadas/`: capturas marcadas, las que van al Word
+
+  Nombre de archivo: `NN-flujo-paso.png`, por ejemplo `05-unirse-lista.png`.
+
+### 4.2 Cómo marcar (mismo estilo en todas)
+
+Con el script `docs/tools/anotar.py` (necesita `pip install pillow`; `python docs/tools/anotar.py --test` comprueba que funciona). Resultado de referencia: `docs/tools/ejemplo-anotacion.png`.
+
+| Qué se señala | Marca | Ejemplo |
+|---|---|---|
+| Botón pequeño o icono (copiar, ⋮, 👥, ojo, pantalla completa) | **Círculo** rojo | `circulo:980,603,26:4` |
+| Botón ancho (Crear reunión, Unirse, Permitir) | **Óvalo** rojo | `ovalo:272,481,604,520:1` |
+| Zona o panel (tarjeta, lista, barra roja, panel de participantes) | **Borde punteado** rojo | `rect:252,562,1020,720:3` |
+
+```
+python docs/tools/anotar.py docs/manual/capturas/01-inicio.png docs/manual/anotadas/01-inicio.png ovalo:272,481,604,520:1 rect:645,338,1020,542:2
+```
+
+**Reglas:**
+- El número de la marca es el **orden en que se hace** dentro de esa captura. El texto del manual lo cita: «pulsa **Crear reunión** (1)».
+- Como máximo 4 marcas por captura. Si hacen falta más, partir en dos capturas.
+- La marca rodea el elemento sin taparlo. Las coordenadas son píxeles de la captura.
+- No añadir flechas, textos ni colores distintos dentro de la imagen. Todas llevan el mismo rojo y grosor.
+
+### 4.3 Plan de capturas por flujo
+
+| N.º | Flujo | PC | Estado de la pantalla | Marcas |
+|---|---|---|---|---|
+| 01 | Inicio | B | Pantalla de inicio con la reunión de A en la lista | rect: «Te verán como»; óvalo: Crear reunión; rect: Unirse con IP y código; rect: Reuniones en tu red |
+| 02 | Inicio | B | Pie de la ventana | rect: Red; rect: Firewall; círculo: Ayuda de red |
+| 03 | Crear reunión | A | Tarjeta «Crear reunión» con un nombre escrito | rect: nombre; óvalo: Crear reunión |
+| 04 | Crear reunión | A | Pantalla de preparación | rect: Tu nombre; óvalo: Crear y entrar |
+| 05 | Crear reunión | A | Sala recién creada | rect: IP; rect: Código; círculo: copiar IP y código; círculo: participantes |
+| 06 | Unirse | B | Lista de reuniones | óvalo: Unirse |
+| 07 | Unirse | B | «Unirse con IP y código» con la IP escrita | rect: IP; óvalo: Continuar |
+| 08 | Unirse | B | Preparación con el código escrito | rect: Código; óvalo: Entrar |
+| 09 | Unirse | B | Código incorrecto | rect: mensaje de error |
+| 10 | Unirse | B | Sala con 2 personas | rect: panel de participantes; rect: barra de controles |
+| 11 | Presentar | B | Barra inferior | círculo: Presentar |
+| 12 | Presentar | B | Selector «¿Qué quieres presentar?» | óvalo: Pantalla principal; rect: ventanas; círculo: casilla de sonido |
+| 13 | Presentar | A | Viendo la presentación de B (ratón encima) | rect: presentación; círculo: pantalla completa |
+| 14 | Presentar | B | Su propia presentación (espejo) | rect: vista; círculo: ojo (ocultar) |
+| 15 | Presentar | B | Espejo oculto | óvalo: Ver lo que presento |
+| 16 | Presentar | B | Barra inferior presentando | círculo: Detener |
+| 17 | Roles | A | Menú ⋮ de B abierto | círculo: ⋮; rect: opciones |
+| 18 | Control | A | Menú ⋮ → «Pedir control de su PC» | rect: opción |
+| 19 | Control | B | Diálogo «Solicitud de control» | óvalo: Rechazar; óvalo: Permitir |
+| 20 | Control | B | Barra roja arriba mientras lo controlan | rect: barra; óvalo: Detener control |
+| 21 | Control | A | Vista de control de la PC de B | rect: barra flotante; círculo: pantalla completa; círculo: ✕ |
+| 22 | Control | A | Panel «Controlando» | rect: panel; óvalo: Detener |
+| 23 | Control | B | Aviso «Control finalizado» | rect: aviso |
+| 24 | Sala | A | Panel de participantes oculto | círculo: participantes |
+| 25 | Salir | A/B | Barra inferior | círculo: Salir o Terminar |
+| 26 | Ayuda | B | Ventana «Red y firewall» | rect: comando del firewall; óvalo: Cerrar |
+
+Cada captura va en la sección **5. Flujo de Uso Paso a Paso** del manual, en este orden. Debajo va un párrafo corto que explica el paso citando los números de las marcas, igual que la plantilla pone texto y luego imagen. Las capturas 01, 02 y 05 sirven también para **4. Interfaz Principal**.
+
+### 4.4 Prompt para el Claude Code de la PC B
+
+```
+Lee docs/GUIA-DOCUMENTACION.md (secciones 2 y 4) y docs/GUIA-PRUEBAS-LAN.md.
+Con computer use, maneja la ventana de Mirror Studio de esta PC (ya abierta con npm run dev),
+conectada a la reunión de la PC anfitriona (IP y código: te los doy yo).
+Sigue el plan de la sección 4.3 en orden. Para cada fila:
+  1) deja la pantalla en el estado indicado (si hace falta algo en la otra PC, detente y pídemelo),
+  2) toma la captura y guárdala en docs/manual/capturas/NN-flujo-paso.png,
+  3) márcala con python docs/tools/anotar.py según la columna «Marcas», usando las coordenadas
+     de la propia captura, y guárdala en docs/manual/anotadas/,
+  4) abre la imagen marcada y comprueba que cada marca rodea el elemento correcto sin taparlo.
+Al terminar, escribe en docs/manual/textos.md el texto de cada paso (sección 5 del manual) citando
+los números de las marcas. No toques los .docx: el Word lo arma una persona copiando la plantilla,
+sin cambiar su formato (sección 2).
+```
+
 ## Antes de entregar
 
 - [ ] Abrir la plantilla y el documento nuevo lado a lado: fuentes, tamaños, colores, márgenes y numeración iguales.
