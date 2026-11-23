@@ -147,6 +147,29 @@ describe('PC control', () => {
     expect(s.luis.c.of('control-input')).toHaveLength(1)
     expect(s.luis.c.last('control-input')).toMatchObject({ from: s.teacher.id })
   })
+  it('relays health only from the controlled PC to its controller, and a reset only the other way', () => {
+    const s = setup()
+    const eve = s.mk('Eve')
+    const health = { code: 'blocked-admin', detail: 'Taskmgr', received: 3 } as const
+    send(s.m, s.luis.id, { t: 'control-status', other: s.teacher.id, health }) // no grant yet: dropped
+    send(s.m, s.teacher.id, { t: 'control-reset', target: s.luis.id })
+    expect(s.teacher.c.of('control-status')).toHaveLength(0)
+    expect(s.luis.c.of('control-reset')).toHaveLength(0)
+    grant(s)
+    send(s.m, s.luis.id, { t: 'control-status', other: s.teacher.id, health })
+    expect(s.teacher.c.last('control-status')).toEqual({ t: 'control-status', from: s.luis.id, health })
+    send(s.m, s.teacher.id, { t: 'control-reset', target: s.luis.id })
+    expect(s.luis.c.last('control-reset')).toEqual({ t: 'control-reset', from: s.teacher.id })
+    // Nobody else can fake either direction, and nobody else hears them.
+    send(s.m, eve.id, { t: 'control-status', other: s.teacher.id, health: { code: 'ok', received: 0 } })
+    send(s.m, eve.id, { t: 'control-reset', target: s.luis.id })
+    send(s.m, s.teacher.id, { t: 'control-status', other: s.luis.id, health }) // wrong direction
+    expect(s.teacher.c.of('control-status')).toHaveLength(1)
+    expect(s.luis.c.of('control-reset')).toHaveLength(1)
+    expect(s.luis.c.of('control-status')).toHaveLength(0)
+    expect(eve.c.of('control-status')).toHaveLength(0)
+    expect(s.boss.c.of('control-reset')).toHaveLength(0)
+  })
   it('a participant cannot request control, nor grant it to themselves', () => {
     const s = setup()
     const eve = s.mk('Eve')

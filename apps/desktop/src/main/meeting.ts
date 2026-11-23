@@ -129,6 +129,17 @@ export class MeetingHost extends EventEmitter {
         if (!this.take(actor)) return
         this.members.get(msg.target)?.conn.send({ t: 'control-input', from, input: msg.input }); break
       }
+      // Health goes only from a controlled PC to the PC controlling it, and a reset only the other way round.
+      case 'control-status': {
+        if (!this.grants.some((g) => g.target === from && g.controller === msg.other)) return
+        if (!this.take(actor)) return
+        this.members.get(msg.other)?.conn.send({ t: 'control-status', from, health: msg.health }); break
+      }
+      case 'control-reset': {
+        if (!this.grants.some((g) => g.controller === from && g.target === msg.target)) return
+        if (!this.take(actor)) return
+        this.members.get(msg.target)?.conn.send({ t: 'control-reset', from }); break
+      }
       case 'rtc': this.emit('rtc', from, msg); break
       case 'leave': this.leave(from); break
     }

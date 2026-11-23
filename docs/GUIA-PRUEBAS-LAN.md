@@ -124,6 +124,19 @@ Marca cada prueba con ✅ o ❌ y anota qué viste. Haz primero las **básicas**
 | 28 | A pulsa **Terminar** | Todos vuelven al inicio con un aviso | |
 | 29 | Con 3 o más PCs: una presenta y las demás miran | Todas ven la presentación; anotar si se ve fluida | |
 
+### 5.6 Control que deja de responder (detección y recuperación)
+
+Mientras A controla a B, B le informa cada 2 s cómo va el control. Si algo falla, A ve un aviso ámbar bajo la barra «Controlando B». Si el problema se puede arreglar solo, el control se reinicia: hasta 3 veces seguidas, como mucho una cada 10 s. El botón ↻ de la barra hace lo mismo a mano.
+
+| # | Paso | Resultado esperado | ✅/❌ |
+|---|---|---|---|
+| 30 | A controla a B durante 2 minutos: clics, rueda arriba y abajo, escribir | Nunca deja de responder; sin avisos | |
+| 31 | En B abrir el **Administrador de tareas** (o una terminal «como administrador») y dejarlo delante | A ve «Windows bloquea el control: … ventana de administrador delante (Taskmgr)». La barra roja de B dice lo mismo. Al cambiar de ventana en B, el aviso de A desaparece y el control sigue | |
+| 32 | En B pulsar **Win+L** (bloquear) y volver a entrar | A ve «…muestra una pantalla protegida de Windows…». Al desbloquear, el control vuelve sin pedirlo de nuevo (si la imagen quedó congelada, se recupera sola o con ↻) | |
+| 33 | En B, Administrador de tareas → Detalles → finalizar los `powershell.exe` de Mirror Studio (el ayudante de entrada) | Como mucho 2 a 4 s de «Reiniciando el control…» y vuelve a funcionar solo. El cursor no salta a la esquina | |
+| 34 | A pulsa ↻ en la barra flotante | La imagen parpadea un momento y el control sigue normal | |
+| 35 | Con una PC sin actualizar, intentar unirse | Mensaje «versiones distintas de Mirror Studio»; actualizar ambas | |
+
 ## 6. Qué anotar si algo falla
 
 - Número de prueba, qué PC (A o B) y sistema (Windows 10/11 o Ubuntu).
@@ -145,6 +158,8 @@ Marca cada prueba con ✅ o ❌ y anota qué viste. Haz primero las **básicas**
 | Pantalla negra tras `git pull` | La app siguió con el código anterior | Cerrar la app y volver a ejecutar `npm install` y `npm run dev` |
 | «Código incorrecto» repetido | Bloqueo de 1 min tras 5 intentos | Esperar un minuto; el código no lleva 0, 1, I ni O |
 | Los clics remotos caen desplazados | Escalado de Windows (125 %/150 %) o varios monitores | Anotar el escalado y la resolución de B; usar la pantalla principal |
+| «Versiones distintas de Mirror Studio» al unirse | Una PC no se actualizó | `git pull` en todas y **cerrar y volver a abrir** `npm run dev` (no basta con recargar) |
+| El control deja de responder a los pocos segundos | En B: la app no se reinició tras `git pull`, o hay una ventana de administrador o un aviso de Windows delante | Leer el aviso ámbar en A; reiniciar la app en B; cambiar de ventana en B. Anotar las líneas `[input] …` de la terminal de B |
 
 ## 8. Consejos de buen uso
 

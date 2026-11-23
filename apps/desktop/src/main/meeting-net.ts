@@ -16,6 +16,12 @@ export const MAX_PENDING_HANDSHAKES = 16
 
 const send = (ws: WebSocket, o: object) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(o))
 
+export const VERSION_MISMATCH = 'Esta PC y el anfitrión tienen versiones distintas de Mirror Studio. Actualicen todas las PCs a la misma versión.'
+/** A hello from another protocol version: it would fail validation with a cryptic error, so it gets a clear one. */
+function otherVersion(text: string): boolean {
+  try { const m = JSON.parse(text) as { t?: unknown; v?: unknown }; return m?.t === 'hello' && m.v !== PROTOCOL_VERSION } catch { return false }
+}
+
 /**
  * Secure endpoint of a meeting. Anyone on the LAN may open a socket and ask `info` (name and head count,
  * like the discovery list). Joining needs the session code, proven with an authenticated key exchange:
@@ -75,6 +81,7 @@ export class MeetingServer {
         return
       }
       if (isBinary) { ws.close(4400, 'binary before handshake'); return }
+      if (stage === 'init' && otherVersion(data.toString())) return reject(VERSION_MISMATCH, 4426)
       const p = parseHandshake(data.toString())
       if (!p.ok) { ws.close(4400, p.error); return }
       const m = p.value
@@ -167,7 +174,12 @@ export class MeetingClient extends EventEmitter {
         }
         fail('Mensaje inesperado')
       })
-      ws.on('close', () => { clearTimeout(timer); if (!ready) { ready = true; reject(new Error('Conexión cerrada antes de entrar')) } this.finish('Conexión cerrada') })
+      ws.on('close', (code) => {
+        clearTimeout(timer)
+        // An older host cannot parse our hello and just closes with 4400: almost always a version mismatch.
+        if (!ready) { ready = true; reject(new Error(code === 4400 ? VERSION_MISMATCH : 'Conexión cerrada antes de entrar')) }
+        this.finish('Conexión cerrada')
+      })
     })
   }
 

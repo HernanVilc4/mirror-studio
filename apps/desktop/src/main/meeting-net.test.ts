@@ -3,7 +3,7 @@ import WebSocket from 'ws'
 import { MeetingHost, type Conn } from './meeting'
 import { MeetingServer, MeetingClient, probeInfo, MAX_FAILURES } from './meeting-net'
 import { generateCode } from '@mirror-studio/protocol/src/node'
-import type { ServerMessage } from '@mirror-studio/protocol'
+import { PROTOCOL_VERSION, type ServerMessage } from '@mirror-studio/protocol'
 
 const IT = 1000
 const cleanups: (() => void)[] = []
@@ -70,7 +70,7 @@ describe('joining over the network', () => {
 
   it('reports the meeting name and head count without a code', async () => {
     const h = await host()
-    expect(await probeInfo('127.0.0.1', h.port)).toEqual({ t: 'info-reply', v: 2, name: 'Clase de Redes', host: 'PC-LAB-1', participants: 1 })
+    expect(await probeInfo('127.0.0.1', h.port)).toEqual({ t: 'info-reply', v: PROTOCOL_VERSION, name: 'Clase de Redes', host: 'PC-LAB-1', participants: 1 })
   })
 
   it('refuses when the meeting is full', async () => {
