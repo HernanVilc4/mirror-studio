@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SessionState } from '@mirror-studio/protocol'
+import type { ControlHealth, SessionState } from '@mirror-studio/protocol'
 import type { FoundMeeting, NetInfo, ThemeInfo } from '../../preload'
 
 export type Phase = 'home' | 'prep' | 'room'
@@ -22,6 +22,12 @@ export interface Ui {
   asks: { controller: string; name: string }[]
   presentation: MediaStream | null
   controlView: MediaStream | null
+  /**
+   * What the PC I control last reported, when it arrived, and for how many reports in a row the input I
+   * sent did not arrive there (`stalled`).
+   */
+  controlHealth: (ControlHealth & { at: number; stalled: number }) | null
+  /** I am presenting (or about to): drives the "Detener" button. A capture made only for being controlled does not count. */
   sharing: boolean
   /** My own presentation, to show it back to me (the "mirror"). Null while not presenting. */
   localPreview: MediaStream | null
@@ -37,7 +43,7 @@ let n = 0
 export const useUi = create<Ui>((set) => ({
   phase: 'home', intent: null, myName: '', busy: false, error: '',
   net: null, found: [], scanning: false, hostInfo: null, state: null, me: '', notices: [], asks: [],
-  presentation: null, controlView: null, sharing: false, localPreview: null, theme: null, bootError: '',
+  presentation: null, controlView: null, controlHealth: null, sharing: false, localPreview: null, theme: null, bootError: '',
   set: (p) => set(p)
 }))
 

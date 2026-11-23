@@ -14,7 +14,7 @@ import {
   createCipheriv, createDecipheriv, createHash, createHmac, createPublicKey,
   diffieHellman, generateKeyPairSync, hkdfSync, pbkdf2Sync, randomBytes, timingSafeEqual, type KeyObject
 } from 'node:crypto'
-import { CODE_ALPHABET, CODE_LENGTH, normalizeCode, type Hello, type HelloReply, type Confirm, type ConfirmOk } from './index'
+import { CODE_ALPHABET, CODE_LENGTH, PROTOCOL_VERSION, normalizeCode, type Hello, type HelloReply, type Confirm, type ConfirmOk } from './index'
 
 export const PBKDF2_ITERATIONS = 200_000
 const SPKI_X25519_PREFIX = Buffer.from('302a300506032b656e032100', 'hex')
@@ -68,7 +68,7 @@ const eq = (a: string, b: string) => { const x = Buffer.from(a), y = Buffer.from
 export class ClientHandshake {
   private kp = newKeyPair(); private nonce = b64(randomBytes(16)); private m?: Material
   constructor(private code: string, private name: string, private iterations = PBKDF2_ITERATIONS) {}
-  hello(): Hello { return { t: 'hello', v: 2, pub: b64(this.kp.rawPublic), nonce: this.nonce, name: this.name } }
+  hello(): Hello { return { t: 'hello', v: PROTOCOL_VERSION, pub: b64(this.kp.rawPublic), nonce: this.nonce, name: this.name } }
   /** Returns the confirmation to send, or null when the reply is malformed. */
   onReply(r: HelloReply): Confirm | null {
     const m = derive('client', this.kp.privateKey, unb64(r.pub), this.code, r.salt, this.iterations,

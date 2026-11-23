@@ -2,13 +2,18 @@ import { DEFAULT_PORT, type ClientMessage, type ServerMessage } from '@mirror-st
 import { generateCode, PBKDF2_ITERATIONS } from '@mirror-studio/protocol/src/node'
 import { MeetingHost } from './meeting'
 import { MeetingClient, MeetingServer } from './meeting-net'
-import { RemoteInput, type InputDriver } from './input'
+import { RemoteInput, type InputDriver, type InjectorHealth } from './input'
 
 /** What the main process pushes to the window. */
 export type UiEvent =
   | { t: 'message'; m: ServerMessage }
   | { t: 'rtc-in'; from: string; kind: 'offer' | 'answer' | 'ice'; data: string }
   | { t: 'closed'; reason: string }
+  /** Something only this PC's user needs to read (it never comes from the host). */
+  | { t: 'notice'; text: string }
+
+/** While this PC is controlled, how often it checks its injector and tells the controller how it is doing. */
+export const HEALTH_MS = 2000
 
 /**
  * One meeting on this PC, either hosting it or joined to someone else's. Electron-free so it can be
@@ -23,11 +28,15 @@ export class AppSession {
   private me = ''
   private ended = false
   private names = new Map<string, string>()
+  private healthTimer: ReturnType<typeof setInterval> | null = null
+  private probing = false
+  private lastHealth: InjectorHealth['code'] = 'ok'
 
   /** `onControlled` fires with the controller when someone starts controlling THIS PC, and with null when it stops. */
   constructor(
     driver: InputDriver, private emit: (e: UiEvent) => void, private iterations = PBKDF2_ITERATIONS,
-    private onControlled: (by: { id: string; name: string } | null) => void = () => {}
+    private onControlled: (by: { id: string; name: string } | null) => void = () => {},
+    private healthMs = HEALTH_MS
   ) {
     this.input = new RemoteInput(driver)
   }
@@ -96,12 +105,19 @@ export class AppSession {
       case 'state': this.remember(m.state.participants); break
       case 'control-started':
         if (m.target === this.me) {
-          if (this.input.begin(m.controller)) this.onControlled({ id: m.controller, name: this.names.get(m.controller) ?? 'Alguien' })
-          else this.send({ t: 'control-revoke', other: m.controller })
+          if (this.input.begin(m.controller)) {
+            this.onControlled({ id: m.controller, name: this.names.get(m.controller) ?? 'Alguien' })
+            this.watchHealth(m.controller)
+          } else this.send({ t: 'control-revoke', other: m.controller })
         }
         break
       case 'control-ended': if (m.target === this.me) this.stopControlled(); break
-      case 'control-input': this.input.apply(m.from, m.input); break
+      // Applied here; the window has no use for dozens of mouse moves a second.
+      case 'control-input': this.input.apply(m.from, m.input); return
+      case 'control-reset':
+        // The controller saw its input or the picture stop: fresh injector now (the window re-captures the screen).
+        if (m.from === this.input.controlledBy) { this.input.reset(); void this.reportHealth(m.from) }
+        break
       case 'closed': this.stopControlled(); break
     }
     this.emit({ t: 'message', m })
@@ -109,9 +125,39 @@ export class AppSession {
 
   private remember(list: { id: string; name: string }[]) { this.names = new Map(list.map((p) => [p.id, p.name])) }
   private stopControlled() {
+    this.stopHealth()
     const was = this.input.active
     this.input.end() // releases every held key and button
     if (was) this.onControlled(null)
+  }
+
+  // ---- health of the control of THIS PC ----------------------------------------------------------
+
+  private watchHealth(controller: string) {
+    this.stopHealth()
+    this.lastHealth = 'ok'
+    this.healthTimer = setInterval(() => void this.reportHealth(controller), this.healthMs)
+    void this.reportHealth(controller)
+  }
+  private stopHealth() { if (this.healthTimer) clearInterval(this.healthTimer); this.healthTimer = null }
+  /** Probes the injector (restarting it if stuck) and tells the controller, which shows it and can ask for a reset. */
+  private async reportHealth(controller: string) {
+    if (this.probing) return
+    this.probing = true
+    try {
+      const h = await this.input.probe()
+      if (this.input.controlledBy !== controller) return // control ended while probing
+      this.send({ t: 'control-status', other: controller, health: { ...h, received: this.input.received } })
+      if (h.code !== this.lastHealth) {
+        this.lastHealth = h.code
+        // The person in front of this PC is the only one who can fix this one.
+        if (h.code === 'blocked-admin') {
+          this.emit({ t: 'notice', text: `Windows no deja que te controlen mientras ${h.detail && h.detail !== '?' ? `«${h.detail}»` : 'una ventana de administrador'} está delante. Cámbiala o ciérrala.` })
+        }
+      }
+    } catch (e) {
+      console.error('[control] health check failed', e)
+    } finally { this.probing = false }
   }
 
   private teardown(reason: string) {

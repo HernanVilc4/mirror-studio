@@ -100,7 +100,25 @@ npm run dev                                # electron-vite
 - **Todos pueden presentar:** `canPresent` devuelve `true` para cualquier rol. Sigue sin poder quitarle la presentación alguien de rango menor a uno de rango mayor. Perder un rol ya no corta la presentación. Tests actualizados.
 - Tests: protocolo 22 ✓, escritorio 63 ✓, typecheck ✓.
 
+### Control que deja de responder: detección y recuperación (23-nov, tarde)
+- **Síntoma:** a veces, tras unos segundos, los clics de quien controla dejan de llegar. Es intermitente.
+- **Verificado:** `scripts/control-soak.test.ts` (solo corre con `MS_SOAK=1` y mueve el ratón real) pasa el control completo durante 20 s por la red cifrada, el relé del anfitrión y el ayudante real. Probado en una PC Windows real, sin fallos.
+- **Causas probables, y lo que hace ahora la app:**
+  - Una PC actualizada con `git pull` pero sin reiniciar `npm run dev` sigue con el ayudante viejo, que muere con la rueda. Ahora se sube el protocolo a **v3**: con versiones distintas, la conexión se rechaza con un mensaje claro.
+  - Una **ventana de administrador** delante (Administrador de tareas, terminal elevada) o una **pantalla protegida** (UAC, bloqueo, Ctrl+Alt+Supr) hacen que Windows descarte la entrada en silencio. El ayudante lo detecta (comando `P`) y se avisa a ambos; en la PC controlada el aviso sale en la barra roja.
+  - **Ayudante muerto o colgado:** cada 2 s se le pregunta. Si no responde en 3 s, se relanza (con 20 s de margen mientras compila), y el cursor vuelve a su última posición.
+  - **Captura perdida** en la PC controlada: se vuelve a capturar sola.
+  - **Imagen congelada** o **clics que no llegan**: quien controla lo deduce del contador `received` y de los fotogramas, y pide `control-reset`. Ese reset relanza el ayudante y vuelve a capturar la pantalla. Lo hace solo, hasta 3 veces y una cada 10 s, y también con el botón ↻.
+- **Protocolo:**
+  - Mensajes nuevos: `control-status` (de la PC controlada a su controlador) y `control-reset` (del controlador a la controlada). El anfitrión solo los reenvía si hay un control activo entre ambos.
+  - El saludo usaba la versión fija `2` en `node.ts`; ahora usa la constante.
+- **Arreglos de la revisión del merge:**
+  - A quien están controlando ya no le sale «Detener / Dejar de presentar», y pulsarlo no corta el vídeo del controlador.
+  - Al soltar el control mientras se presenta, la imagen vuelve a modo `detail`.
+- Guía de pruebas: sección 5.6 (pruebas 30 a 35) y dos filas nuevas en la sección 7.
+
 ### Próximo paso
+0. **Las dos PCs** deben hacer `git pull` y cerrar y volver a abrir `npm run dev`. Luego, pruebas 30 a 35 de `GUIA-PRUEBAS-LAN.md`.
 1. Subir lo pendiente. Luego, en el Ubuntu, `git pull`.
 2. Repetir el escenario del fallo: A presenta una **ventana** → B pide control → A acepta → B deja el control. Comprobar:
    - B vuelve a ver la ventana de A, no la pantalla entera.

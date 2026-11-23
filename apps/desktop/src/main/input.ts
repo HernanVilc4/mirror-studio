@@ -2,7 +2,10 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { ControlInput } from '@mirror-studio/protocol'
+import type { ControlHealth, ControlInput } from '@mirror-studio/protocol'
+
+/** What the injector can tell about itself: see ControlHealth in the protocol for the codes. */
+export type InjectorHealth = Omit<ControlHealth, 'received'>
 
 /** Low-level injection. Implementations must be safe to call after dispose() (no-ops). */
 export interface InputDriver {
@@ -13,6 +16,10 @@ export interface InputDriver {
   /** `vk` is a Windows virtual-key code; `extended` marks keys such as arrows and Delete. */
   key(vk: number, extended: boolean, down: boolean): void
   text(s: string): void
+  /** Optional health check: can injected input reach the desktop right now? A stuck injector is replaced. */
+  probe?(): Promise<InjectorHealth>
+  /** Optional: drops the injector and starts a fresh one (the controller saw its input stop working). */
+  reset?(): void
   dispose(): void
 }
 
@@ -43,8 +50,12 @@ export class RemoteInput {
   private keys = new Map<string, [number, boolean]>()
   private buttons = new Set<'left' | 'right' | 'middle'>()
   private controller: string | null = null
+  private count = 0
 
   constructor(private driver: InputDriver) {}
+
+  /** Input events received from the current controller. Reported back, so the controller can tell when its input stops arriving. */
+  get received() { return this.count }
 
   get supported() { return this.driver.supported }
   get active() { return this.controller !== null }
@@ -55,6 +66,7 @@ export class RemoteInput {
     if (!this.driver.supported) return false
     this.releaseAll()
     this.controller = controller
+    this.count = 0
     return true
   }
   /** Stops accepting input and releases everything still held. Safe to call repeatedly. */
@@ -62,6 +74,7 @@ export class RemoteInput {
 
   apply(from: string, input: ControlInput): void {
     if (this.controller === null || from !== this.controller) return
+    this.count++
     switch (input.t) {
       case 'mouse-move': this.driver.mouseMove(input.x, input.y); break
       case 'mouse-button':
@@ -83,6 +96,14 @@ export class RemoteInput {
     for (const b of this.buttons) this.driver.mouseButton(b, false)
     this.keys.clear(); this.buttons.clear()
   }
+  probe(): Promise<InjectorHealth> { return this.driver.probe?.() ?? Promise.resolve({ code: 'ok' }) }
+
+  /** Starts the injector again, then lifts whatever the old one may have left pressed. */
+  reset() {
+    this.driver.reset?.()
+    this.releaseAll()
+  }
+
   dispose() { this.end(); this.driver.dispose() }
 }
 
@@ -91,12 +112,14 @@ export const unsupportedDriver: InputDriver = {
   supported: false, mouseMove() {}, mouseButton() {}, wheel() {}, key() {}, text() {}, dispose() {}
 }
 
-// UNVERIFIED on a real Windows machine: written against the documented SendInput API, no Windows host was
-// available. It runs one persistent PowerShell so each event costs a line on stdin, not a process start.
+// One persistent PowerShell, so each event costs a line on stdin, not a process start. Besides injecting,
+// it answers health probes ('P n'): Windows silently drops injected input while an elevated window is in
+// front (UIPI) or a secure screen is up (UAC prompt, lock screen, Ctrl+Alt+Del), which looks exactly like
+// "my clicks stopped working" from the other PC.
 const PS_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @"
-using System; using System.Runtime.InteropServices;
+using System; using System.Diagnostics; using System.Runtime.InteropServices;
 public static class MS {
   [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
   [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
@@ -104,13 +127,46 @@ public static class MS {
   [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public U u; }
   [DllImport("user32.dll", SetLastError=true)] static extern uint SendInput(uint n, INPUT[] i, int size);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
-  static void Send(INPUT i) { SendInput(1, new INPUT[]{ i }, Marshal.SizeOf(typeof(INPUT))); }
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w, out uint pid);
+  [DllImport("user32.dll")] static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
+  [DllImport("user32.dll")] static extern bool SwitchDesktop(IntPtr d);
+  [DllImport("user32.dll")] static extern bool CloseDesktop(IntPtr d);
+  [DllImport("kernel32.dll")] static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+  [DllImport("advapi32.dll")] static extern bool OpenProcessToken(IntPtr p, uint access, out IntPtr t);
+  [DllImport("advapi32.dll")] static extern bool GetTokenInformation(IntPtr t, int cls, out int info, int len, out int ret);
+  /** SendInput calls Windows refused (it returns 0 when something blocks the input). */
+  public static int Refused;
+  static void Send(INPUT i) { if (SendInput(1, new INPUT[]{ i }, Marshal.SizeOf(typeof(INPUT))) == 0) Refused++; }
+  // 1 elevated, 0 not, -1 unknown. QUERY_LIMITED_INFORMATION + TOKEN_QUERY work on elevated processes too.
+  static int Elevated(uint pid) {
+    IntPtr p = OpenProcess(0x1000, false, pid); if (p == IntPtr.Zero) return -1;
+    try {
+      IntPtr t; if (!OpenProcessToken(p, 0x0008, out t)) return -1;
+      try { int e, r; return GetTokenInformation(t, 20, out e, 4, out r) ? (e != 0 ? 1 : 0) : -1; } finally { CloseHandle(t); }
+    } finally { CloseHandle(p); }
+  }
+  static readonly bool SelfElevated = Elevated((uint)Process.GetCurrentProcess().Id) == 1;
+  /** What would stop injected input right now: "ok", "secure" (UAC prompt, lock screen, Ctrl+Alt+Del) or "admin <process>". */
+  public static string Probe() {
+    IntPtr d = OpenInputDesktop(0, false, 0x0100); // DESKTOP_SWITCHDESKTOP
+    if (d == IntPtr.Zero) return "secure";
+    bool shown = SwitchDesktop(d); CloseDesktop(d); // fails while the input desktop is not ours
+    if (!shown) return "secure";
+    if (SelfElevated) return "ok"; // an elevated injector reaches every window
+    uint pid; IntPtr w = GetForegroundWindow();
+    if (w == IntPtr.Zero || GetWindowThreadProcessId(w, out pid) == 0 || pid == 0 || Elevated(pid) != 1) return "ok";
+    string name = "?"; try { name = Process.GetProcessById((int)pid).ProcessName; } catch {}
+    return "admin " + name;
+  }
   // data is signed on purpose: a wheel scroll down is negative (-120). Casting that to uint in PowerShell throws.
   public static void Mouse(int dx, int dy, int data, uint flags) { var i = new INPUT(); i.type = 0; i.u.mi.dx = dx; i.u.mi.dy = dy; i.u.mi.mouseData = unchecked((uint)data); i.u.mi.dwFlags = flags; Send(i); }
   public static void Key(ushort vk, ushort scan, uint flags) { var i = new INPUT(); i.type = 1; i.u.ki.wVk = vk; i.u.ki.wScan = scan; i.u.ki.dwFlags = flags; Send(i); }
 }
 "@
 [void][MS]::SetProcessDPIAware()  # without it, scaled displays get virtualized coordinates
+[Console]::Out.WriteLine('R'); [Console]::Out.Flush()  # ready: the C# part compiled
 $lx = 0; $ly = 0
 while (($line = [Console]::In.ReadLine()) -ne $null) {
   # One bad line must never kill the helper: with 'Stop' an uncaught error ends the script and every later
@@ -123,6 +179,7 @@ while (($line = [Console]::In.ReadLine()) -ne $null) {
       'W' { if ([int]$p[2] -ne 0) { [MS]::Mouse(0, 0, [int]$p[2], 0x0800) }; if ([int]$p[1] -ne 0) { [MS]::Mouse(0, 0, [int]$p[1], 0x1000) } }
       'K' { [MS]::Key([uint16]$p[1], 0, [uint32]$p[2]) }                             # flags: 1 = extended, 2 = key up
       'T' { foreach ($c in [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[1])).ToCharArray()) { [MS]::Key(0, [uint16]$c, 4); [MS]::Key(0, [uint16]$c, 6) } }
+      'P' { [Console]::Out.WriteLine("P $($p[1]) $([MS]::Refused) $([MS]::Probe())"); [Console]::Out.Flush() }  # health probe
       'Q' { exit 0 }                                                                 # 'break' would only leave the switch
     }
   } catch { [Console]::Error.WriteLine("input '$line': $($_.Exception.Message)") }
@@ -134,41 +191,101 @@ export const INPUT_HELPER_SCRIPT = PS_SCRIPT
 
 const BUTTON_FLAGS = { left: [0x0002, 0x0004], right: [0x0008, 0x0010], middle: [0x0020, 0x0040] } as const
 
-export function createWindowsDriver(): InputDriver {
+/** Reads a probe answer ("<refused> ok|secure|admin <process>"). A growing refusal count means Windows dropped input. */
+export function readProbe(answer: string, refusedBefore: number): { health: InjectorHealth; refused: number } {
+  const [n, state = 'ok', ...name] = answer.trim().split(' ')
+  const refused = Number(n) || 0
+  if (state === 'secure') return { health: { code: 'blocked-secure' }, refused }
+  if (state === 'admin') return { health: { code: 'blocked-admin', detail: name.join(' ').slice(0, 64) || undefined }, refused }
+  return { health: { code: refused > refusedBefore ? 'rejected' : 'ok' }, refused }
+}
+
+/**
+ * `probeMs`: how long a running helper may take to answer a probe before it counts as stuck and is replaced.
+ * `bootMs`: the same for a helper that is still starting (compiling its C# part takes seconds on a slow PC).
+ */
+export function createWindowsDriver(opts: { probeMs?: number; bootMs?: number } = {}): InputDriver {
+  const PROBE_MS = opts.probeMs ?? 3000, BOOT_MS = opts.bootMs ?? 20_000
   const dir = mkdtempSync(join(tmpdir(), 'mirror-studio-'))
   const file = join(dir, 'input.ps1')
   writeFileSync(file, PS_SCRIPT, 'utf8')
   let ps: ChildProcessWithoutNullStreams | null = null
   let disposed = false
   let startedAt = 0
+  let ready = false
+  let refused = 0
+  /** A fresh helper first puts the cursor back here, so a click right after a restart does not land at 0,0. */
+  let lastMove = ''
+  let seq = 0
+  const answers = new Map<number, (answer: string) => void>()
+
   const start = () => {
-    startedAt = Date.now()
+    startedAt = Date.now(); ready = false; refused = 0
     const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file], { windowsHide: true })
     p.on('error', (e) => { console.error('[input] helper failed to start:', e.message); if (ps === p) ps = null })
-    p.on('exit', (code) => { if (ps === p) ps = null; if (!disposed) console.error(`[input] helper exited (${code}); it restarts on the next event`) })
-    p.stdin.on('error', () => { /* helper gone: the next event restarts it */ })
+    p.on('exit', (code) => { if (ps === p) ps = null; if (!disposed) console.error(`[input] helper exited (${code}); it restarts on the next event or health check`) })
+    p.stdin.on('error', () => { /* helper gone: the next event or health check restarts it */ })
     p.stderr.on('data', (d) => console.error('[input]', String(d).trim()))
+    let out = ''
+    p.stdout.on('data', (d) => {
+      out += String(d)
+      for (let i = out.indexOf('\n'); i >= 0; i = out.indexOf('\n')) {
+        const l = out.slice(0, i).trim(); out = out.slice(i + 1)
+        if (ps !== p) continue // a replaced helper's last words
+        if (l === 'R') ready = true
+        else if (l.startsWith('P ')) {
+          const sp = l.indexOf(' ', 2)
+          answers.get(Number(sp < 0 ? l.slice(2) : l.slice(2, sp)))?.(sp < 0 ? '' : l.slice(sp + 1))
+        }
+      }
+    })
+    if (lastMove) p.stdin.write(lastMove + '\n')
     return p
   }
-  ps = start()
+  const restart = (why: string) => {
+    console.error(`[input] restarting the helper: ${why}`)
+    const old = ps; ps = null
+    try { old?.kill() } catch { /* already gone */ }
+    ps = start()
+  }
+  // Never stay dead, but start at most once every 2 s, so a missing powershell.exe cannot cause a spawn storm.
+  const ensure = () => { if (!disposed && !ps && Date.now() - startedAt > 2000) ps = start(); return ps }
   const line = (s: string) => {
     if (disposed) return
-    // Never stay dead: a crashed helper used to drop all remote input until the app restarted.
-    // At most one restart every 2 s, so a missing powershell.exe cannot cause a spawn storm.
-    if (!ps && Date.now() - startedAt > 2000) ps = start()
-    try { ps?.stdin.write(s + '\n') } catch { /* helper gone */ }
+    try { ensure()?.stdin.write(s + '\n') } catch { /* helper gone */ }
   }
-  const drv: InputDriver = {
+  ps = start()
+
+  return {
     supported: true,
-    mouseMove: (x, y) => line(`M ${Math.round(x * 65535)} ${Math.round(y * 65535)}`),
+    mouseMove: (x, y) => { lastMove = `M ${Math.round(x * 65535)} ${Math.round(y * 65535)}`; line(lastMove) },
     mouseButton: (b, down) => line(`B ${BUTTON_FLAGS[b][down ? 0 : 1]}`),
     // Windows wheel units: 120 per notch. Positive = away from the user (scroll up).
     wheel: (dx, dy) => line(`W ${Math.trunc(dx)} ${Math.trunc(-dy)}`),
     key: (vk, ext, down) => line(`K ${vk} ${(ext ? 1 : 0) | (down ? 0 : 2)}`),
     text: (s) => line(`T ${Buffer.from(s, 'utf8').toString('base64')}`),
+    probe: () => new Promise<InjectorHealth>((resolve) => {
+      const p = disposed ? null : ensure()
+      if (!p) { resolve({ code: disposed ? 'ok' : 'restarting' }); return }
+      const n = ++seq
+      const timer = setTimeout(() => {
+        answers.delete(n)
+        // Alive but silent: stuck, or it never managed to start, so replace it rather than wait forever.
+        // One still compiling its C# part (seconds on a slow PC) is left alone until BOOT_MS.
+        const starting = !ready && Date.now() - startedAt < BOOT_MS
+        if (!starting && ps === p && !disposed) restart(ready ? 'it stopped answering' : 'it did not start')
+        resolve({ code: 'restarting' })
+      }, PROBE_MS)
+      answers.set(n, (answer) => {
+        clearTimeout(timer); answers.delete(n)
+        const r = readProbe(answer, refused); refused = r.refused
+        resolve(r.health)
+      })
+      try { p.stdin.write(`P ${n}\n`) } catch { /* the timer replaces it */ }
+    }),
+    reset: () => { if (!disposed) restart('the controller asked for it') },
     dispose: () => { disposed = true; try { ps?.stdin.end('Q\n') } catch { /* ignore */ } ps?.kill(); ps = null; try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ } }
   }
-  return drv
 }
 
 export const createDriver = (): InputDriver => (process.platform === 'win32' ? createWindowsDriver() : unsupportedDriver)

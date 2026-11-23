@@ -1,4 +1,4 @@
-import type { AssignableRole, ControlInput, ServerMessage, SessionState } from '@mirror-studio/protocol'
+import type { AssignableRole, ControlHealth, ControlInput, ServerMessage, SessionState } from '@mirror-studio/protocol'
 import { useUi, notify } from './store'
 import { Guest, Hub, captureScreen, type View } from './media'
 
@@ -34,6 +34,7 @@ export function init() {
     if (e.t === 'message') onMessage(e.m)
     else if (e.t === 'rtc-in') void hub?.onSignal(e.from, e.kind, e.data)
     else if (e.t === 'closed') leaveLocal(e.reason)
+    else if (e.t === 'notice') notify(e.text)
   })
   ready = boot()
   void window.studio.theme().then((theme) => set({ theme }))
@@ -107,10 +108,17 @@ function onMessage(m: ServerMessage) {
     case 'control-asked': set({ asks: [...ui().asks, { controller: m.controller, name: m.name }] }); break
     case 'control-started':
       if (m.target === ui().me) void startControlCapture()
+      if (m.controller === ui().me) { set({ controlHealth: null }); watch = { since: Date.now(), lastInput: 0, lastMove: 0, lastReset: 0, autoResets: 0 }; sentTimes = [] }
+      break
+    case 'control-status': onControlStatus(m.from, m.health); break
+    case 'control-reset':
+      // The controller saw the picture or its input stop: a fresh capture (main already restarted the injector).
+      if (screenKind === 'control') void recaptureForControl()
       break
     case 'control-ended': {
       set({ asks: ui().asks.filter((a) => a.controller !== m.controller) })
       const me = ui().me
+      if (m.controller === me) set({ controlHealth: null })
       // Only drop a capture made FOR control. A presentation started a moment ago must survive this late message.
       if (m.target === me && screenKind === 'control') endControlCapture()
       if (m.target === me || m.controller === me) notify(`Control finalizado: ${m.reason}`)
@@ -161,11 +169,14 @@ export function setRole(target: string, role: AssignableRole) { send({ t: 'set-r
 function attachScreen(s: MediaStream, kind: 'present' | 'control') {
   releaseScreen(); screen = s; screenKind = kind; screenSince = Date.now()
   const t = s.getVideoTracks()[0]
-  t.onended = () => stopPresent()
+  // The source went away (screen locked, display changed, window closed). A capture serving the person who
+  // controls this PC is taken again, or they would be left with a frozen picture and think control died.
+  t.onended = () => { if (screen !== s) return; if (screenKind === 'control') void recaptureForControl(); else stopPresent() }
   const a = s.getAudioTracks()[0] ?? null
   hub?.setLocalScreen(t, a); void guest?.setScreen(t, a)
   // While presenting, the control capture IS what the others see, so I keep seeing it too.
-  set({ sharing: true, localPreview: kind === 'present' || ui().state?.presenter === ui().me ? s : null })
+  const presenting = kind === 'present' || ui().state?.presenter === ui().me
+  set({ sharing: presenting, localPreview: presenting ? s : null })
 }
 function releaseScreen() {
   screen?.getTracks().forEach((t) => t.stop()); screen = null; screenKind = null
@@ -180,7 +191,9 @@ function releaseScreen() {
 function endControlCapture() {
   const me = ui().me
   if (ui().state?.presenter !== me && !awaitingPresent) { releaseScreen(); return }
-  screenKind = 'present'; set({ localPreview: screen })
+  screenKind = 'present'; set({ sharing: true, localPreview: screen })
+  // Captured for control (smooth motion); now it is a presentation again, where sharp text matters more.
+  const v = screen?.getVideoTracks()[0]; if (v) v.contentHint = 'detail'
   const src = presentSource
   if (src && (src.id !== null || src.audio)) {
     captureScreen(src.id, 'detail', src.audio)
@@ -217,7 +230,9 @@ export function stopPresent() {
   presentSource = null
   awaitingPresent = false; clearTimeout(presentTimer)
   if (ui().state?.presenter === ui().me) send({ t: 'present-stop' })
-  releaseScreen()
+  // Someone controls this PC: the capture is theirs too, so only the presentation stops.
+  if (screenKind === 'control') set({ sharing: false, localPreview: null })
+  else releaseScreen()
 }
 /** The controlled PC must show its primary screen: control coordinates are normalized over it. */
 async function startControlCapture() {
@@ -227,6 +242,23 @@ async function startControlCapture() {
     if (c) send({ t: 'control-revoke', other: c.controller })
   }
 }
+let recapturing = false
+/** Takes the screen again for whoever controls this PC (lost source, or their reset). A few tries, then it says so. */
+async function recaptureForControl() {
+  if (recapturing) return
+  recapturing = true
+  try {
+    for (let i = 0; i < 3; i++) {
+      if (!ui().state?.controls.some((c) => c.target === ui().me)) { if (screenKind === 'control') endControlCapture(); return }
+      try {
+        const s = await captureScreen(null, 'motion')
+        if (screenKind === 'control' || screen === null) { attachScreen(s, 'control'); return }
+        s.getTracks().forEach((t) => t.stop()); return // a presentation took over meanwhile
+      } catch { await new Promise((r) => setTimeout(r, 1000)) }
+    }
+    notify('No se pudo volver a capturar tu pantalla para el control. Detén el control y acéptalo otra vez.')
+  } finally { recapturing = false }
+}
 
 export function requestControl(target: string) { send({ t: 'control-request', target }) }
 export function respondControl(controller: string, accept: boolean) {
@@ -234,6 +266,47 @@ export function respondControl(controller: string, accept: boolean) {
   set({ asks: ui().asks.filter((a) => a.controller !== controller) })
 }
 export function revokeControl(other: string) { send({ t: 'control-revoke', other }) }
-export function sendInput(target: string, input: ControlInput) { send({ t: 'control-input', target, input }) }
+
+// ---- watching my control of another PC ---------------------------------------------------------------
+// The other PC reports every couple of seconds (see AppSession). From that and from what I send, the
+// control view can tell "nothing arrives", "Windows blocks it", "the picture froze", and ask for a reset.
+
+let watch = { since: 0, lastInput: 0, lastMove: 0, lastReset: 0, autoResets: 0 }
+let sentTimes: number[] = []
+/** Automatic resets stop after this many without recovery: then the person is told to retry by hand. */
+export const MAX_AUTO_RESETS = 3
+export const controlWatch = () => watch
+
+export function sendInput(target: string, input: ControlInput) {
+  const now = Date.now()
+  watch.lastInput = now
+  if (input.t === 'mouse-move') watch.lastMove = now
+  sentTimes.push(now); if (sentTimes.length > 600) sentTimes = sentTimes.filter((t) => now - t < 15_000)
+  send({ t: 'control-input', target, input })
+}
+
+function onControlStatus(from: string, health: ControlHealth) {
+  const c = ui().state?.controls.find((x) => x.controller === ui().me)
+  if (!c || c.target !== from) return
+  const now = Date.now(), prev = ui().controlHealth
+  // Input I sent since the previous report (leaving out the last moment, still in flight) that never got there.
+  const lost = !!prev && health.received === prev.received && sentTimes.some((t) => t > prev.at && t < now - 800)
+  const stalled = lost ? (prev?.stalled ?? 0) + 1 : 0
+  set({ controlHealth: { ...health, at: now, stalled } })
+}
+
+/** The view saw no problem: once the last reset is well behind, automatic resets are allowed again. */
+export function noteControlHealthy() { if (watch.autoResets && Date.now() - watch.lastReset > 15_000) watch.autoResets = 0 }
+
+/** Asks the controlled PC for a fresh injector and capture. `auto`: at most every 10 s and MAX_AUTO_RESETS times in a row. */
+export function resetControl(target: string, auto = false): boolean {
+  const now = Date.now()
+  if (auto && (now - watch.lastReset < 10_000 || watch.autoResets >= MAX_AUTO_RESETS)) return false
+  if (auto) watch.autoResets++
+  else watch.autoResets = 0
+  watch.lastReset = now
+  send({ t: 'control-reset', target })
+  return true
+}
 
 export function dispose() { unsub?.(); unsub = null; unsubTheme?.(); unsubTheme = null; clearInterval(scanTimer) }

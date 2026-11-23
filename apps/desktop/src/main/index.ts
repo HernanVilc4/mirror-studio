@@ -27,7 +27,8 @@ const windowIcon = () => {
 app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns')
 
 let win: BrowserWindow | null = null
-const emit = (e: UiEvent) => win?.webContents.send('ui', e)
+// Local notices also go to the always-on-top control bar: the main window may be hidden behind what they talk about.
+const emit = (e: UiEvent) => { win?.webContents.send('ui', e); if (e.t === 'notice') banner?.webContents.send('ui', e) }
 
 /** Emergency stop for the person being controlled. Works even when the app window is not focused. */
 const PANIC_KEY = 'CommandOrControl+Alt+Escape'

@@ -655,6 +655,7 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
   const last = useRef(0)
   useEffect(() => { if (v.current) v.current.srcObject = stream }, [stream])
   useEffect(() => { wrap.current?.focus(); return releaseAll }, [])
+  const problem = useControlProblem(target, name, v)
   const emit = (i: ControlInput) => C.sendInput(target, i)
   function releaseAll() {
     for (const code of down.current) emit({ t: 'key', code, down: false })
@@ -674,9 +675,15 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
       {/* Outside the key-capturing area: this PC's own app stays usable while controlling the other one. */}
       <div className="anim-rise absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/70 py-1 pl-4 pr-1 text-xs text-white opacity-80 shadow-xl backdrop-blur transition-opacity hover:opacity-100">
         <span className="live-dot small" aria-hidden />Controlando <b>{name}</b>
+        <IconBtn icon="refresh" motion="spin" label="Reintentar el control (si los clics o la imagen dejaron de responder)" onClick={() => C.resetControl(target)} />
         <IconBtn icon={fs.on ? 'shrink' : 'expand'} label={fs.on ? 'Salir de pantalla completa' : 'Pantalla completa'} onClick={fs.toggle} />
         <IconBtn icon="x" tone="danger" label="Dejar de controlar" onClick={() => C.revokeControl(target)} />
       </div>
+      {problem && (
+        <div role="status" className="anim-rise absolute left-1/2 top-14 z-10 w-max max-w-[90%] -translate-x-1/2 rounded-xl border border-amber-400/30 bg-amber-950/85 px-4 py-2 text-center text-xs text-amber-100 shadow-xl backdrop-blur">
+          {problem}
+        </div>
+      )}
       <div ref={wrap} tabIndex={0} aria-label={`Controlando la PC de ${name}. Presiona Ctrl+Alt+Esc en esa PC para detener.`}
         className="min-h-0 flex-1 cursor-crosshair rounded-xl bg-black outline-2 outline-accent focus:outline"
         onBlur={releaseAll}
@@ -688,6 +695,8 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
           onPointerDown={(e) => { wrap.current?.focus(); const p = point(e); if (!p) return; e.currentTarget.setPointerCapture(e.pointerId); emit({ t: 'mouse-move', ...p }); buttons.current.add(btnOf(e.button)); emit({ t: 'mouse-button', button: btnOf(e.button), down: true }) }}
           onPointerUp={(e) => { const p = point(e); if (p) emit({ t: 'mouse-move', ...p }); buttons.current.delete(btnOf(e.button)); emit({ t: 'mouse-button', button: btnOf(e.button), down: false }) }}
           onPointerCancel={releaseAll}
+          // The button was released where this view could not see it (another window took the pointer): release it there too.
+          onLostPointerCapture={() => { for (const b of buttons.current) emit({ t: 'mouse-button', button: b, down: false }); buttons.current.clear() }}
           onWheel={(e) => emit({ t: 'wheel', dx: Math.round(e.deltaX), dy: Math.round(e.deltaY) })} />
       </div>
       </div>
@@ -695,6 +704,42 @@ function ControlView({ target, stream, name }: { target: string; stream: MediaSt
     </div>
   )
 }
+
+/**
+ * Why my control of the other PC may not be working right now, from its health reports and from what I see,
+ * or null when all is well. Problems a reset can fix are retried automatically (rate-limited in the controller).
+ */
+function useControlProblem(target: string, name: string, video: React.RefObject<HTMLVideoElement | null>): string | null {
+  const health = useUi((s) => s.controlHealth)
+  const [now, setNow] = useState(() => Date.now())
+  const lastFrame = useRef(Date.now())
+  useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
+  // Every new frame of the other screen. My moves show up in it (its cursor moves), so moving while no frame
+  // arrives means the picture froze, which looks exactly like "my clicks stopped working".
+  useEffect(() => {
+    const el = video.current; if (!el) return
+    let alive = true, h = 0
+    const tick = () => { lastFrame.current = Date.now(); if (alive) h = el.requestVideoFrameCallback(tick) }
+    h = el.requestVideoFrameCallback(tick)
+    return () => { alive = false; el.cancelVideoFrameCallback(h) }
+  }, [video])
+
+  const w = C.controlWatch()
+  const who = `la PC de ${name}`
+  let text: string | null = null, fixable = false
+  if (now - w.since > 7000 && (!health || now - health.at > 7000)) { text = `${cap(who)} no responde. Reintentando…`; fixable = true }
+  else if (health?.code === 'blocked-admin') text = `Windows bloquea el control: en ${who} hay una ventana de administrador delante${health.detail && health.detail !== '?' ? ` («${health.detail}»)` : ''}. Pídele que la cambie o la cierre.`
+  else if (health?.code === 'blocked-secure') text = `${cap(who)} muestra una pantalla protegida de Windows (aviso de administrador, bloqueo o Ctrl+Alt+Supr). El control vuelve cuando se cierre.`
+  else if (health?.code === 'restarting') text = `Reiniciando el control en ${who}…`
+  else if (health?.code === 'rejected') { text = `Windows rechazó tus clics en ${who}. Reintentando…`; fixable = true }
+  else if ((health?.stalled ?? 0) >= 2) { text = `Tus clics no llegan a ${who}. Reintentando…`; fixable = true }
+  else if (now - w.since > 6000 && now - w.lastMove < 3000 && now - lastFrame.current > 4000) { text = 'La imagen se congeló. Recuperando…'; fixable = true }
+
+  useEffect(() => { if (fixable) C.resetControl(target, true); else if (!text) C.noteControlHealthy() }, [fixable, text, now, target])
+  if (fixable && w.autoResets >= C.MAX_AUTO_RESETS) return `${text?.replace(/ (Reintentando|Recuperando)…$/, '')} No se recupera solo: pulsa Reintentar (↻) o deja el control y vuelve a pedirlo.`
+  return text
+}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // ---- Consent ---------------------------------------------------------------------------------------
 
@@ -719,9 +764,20 @@ function AskDialog() {
 
 /** Always-on-top bar shown by a separate window while this PC is controlled. */
 function Banner({ name, id }: { name: string; id: string }) {
+  // Problems only the person here can fix (an admin window in front blocks the control) show up in this bar:
+  // it stays on top, while the main window is likely hidden behind that very window.
+  const [problem, setProblem] = useState('')
+  useEffect(() => {
+    let t = 0
+    const off = window.studio.onEvent((e) => {
+      if (e.t !== 'notice') return
+      setProblem(e.text); clearTimeout(t); t = window.setTimeout(() => setProblem(''), 10_000)
+    })
+    return () => { off(); clearTimeout(t) }
+  }, [])
   return (
     <div className="flex h-full items-center justify-between gap-3 bg-[#7c2d12] px-4 text-sm text-white" role="alert">
-      <span><b>{name}</b> controla esta PC</span>
+      {problem ? <span className="line-clamp-2 text-xs leading-tight" title={problem}>{problem}</span> : <span><b>{name}</b> controla esta PC</span>}
       <button autoFocus className="rounded-md bg-white px-3 py-1 font-medium text-[#7c2d12]" onClick={() => void window.studio.send({ t: 'control-revoke', other: id })}>Detener control</button>
     </div>
   )
