@@ -73,7 +73,7 @@ app.whenReady().then(() => {
     } catch (e) { console.error('[display-media] failed', e); cb({}) }
   })
   // Nothing but screen capture (and the 'media' gate in front of it) is granted: no other permission.
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => { cb(permission === 'display-capture' || permission === 'media' || permission === 'clipboard-sanitized-write') }) // 'media' is how Chromium asks before getDisplayMedia; the app never calls getUserMedia
 
   ipcMain.handle('net-info', async () => {
     const ifaces = listInterfaces()
