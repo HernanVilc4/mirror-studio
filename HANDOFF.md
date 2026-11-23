@@ -79,7 +79,10 @@ npm run dev                                # electron-vite
 - **Pruebas manuales:**
   - `MS_TEST_BOOT=slow|fail npm run dev` fuerza el arranque lento («Preparando el espacio de trabajo…») o el fallido con reintento
   - `npx electron-vite dev --remoteDebuggingPort 9222` permite manejar la app por CDP sin tocar el ratón
-- **Sin verificar aún:** Ubuntu (que el overlay de la barra de título y la detección del tema funcionen ahí), el movimiento reducido real del sistema y los paquetes `.exe` y portable compilados.
+- **Sin verificar aún:** Ubuntu (que el overlay de la barra de título y la detección del tema funcionen ahí) y el movimiento reducido real del sistema.
+- **Paquetes compilados (release v0.1.0, 23-nov). Dos hallazgos que no se ven en desarrollo:**
+  1. **Pantalla vacía en el paquete.** El empaquetador envolvía `mirrorstudio-intro.js` como CommonJS: su UMD exportaba a ese `module` y nunca publicaba `globalThis.MirrorStudioIntro`. Ahora el archivo está en `src/renderer/public/` (idéntico al del kit) y `index.html` lo carga como script clásico. **No volver a importarlo desde el código.** Probado en el portable con CDP: la interfaz carga.
+  2. **Control inteligente de aplicaciones (Windows 11) bloquea los `.exe` modificados sin firma.** Pasa con el instalador NSIS y con un `electron.exe` con el icono incrustado. El portable deja `Mirror Studio.exe` **idéntico al `electron.exe` oficial** (solo renombrado), que Windows conoce y deja abrir. Por eso `package-win.cjs` ya no incrusta el icono: la ventana lo pone al arrancar. Si se consigue un certificado de firma, se puede volver a incrustar.
 
 ### Control remoto que dejaba de responder (arreglado el 23-nov)
 - **Síntoma:** al controlar una PC Windows, el puntero dejaba de actuar a los pocos segundos, pero el vídeo seguía.

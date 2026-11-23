@@ -1,6 +1,6 @@
 import type { StudioApi } from '../../preload'
 
-/** Brand kit controller (brand/mirrorstudio-intro.js), loaded as a local script. */
+/** Brand kit controller (public/mirrorstudio-intro.js), loaded by index.html as a classic script. */
 interface MirrorStudioIntroApi {
   play(options: {
     host: HTMLElement; main: HTMLElement; anchor?: HTMLElement | null; ready: Promise<unknown>

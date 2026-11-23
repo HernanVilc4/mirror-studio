@@ -1,8 +1,10 @@
-// The kit's own controller (unchanged copy of Movimiento/mirrorstudio-intro.js). It also carries the exact
-// traced shapes of the two erres and of the name, so the symbol is never redrawn by hand.
-import './mirrorstudio-intro.js'
+// The kit's own controller (public/mirrorstudio-intro.js, an unchanged copy of the kit file) is loaded by
+// index.html as a classic script before the app. It also carries the exact traced shapes of the two erres and
+// of the name, so the symbol is never redrawn by hand.
+const intro = globalThis.MirrorStudioIntro
+if (!intro) throw new Error('No se pudo cargar la marca (mirrorstudio-intro.js)')
 
-const { forms } = globalThis.MirrorStudioIntro
+const { forms } = intro
 
 type SvgProps = Omit<React.SVGProps<SVGSVGElement>, 'width' | 'height' | 'viewBox'>
 
