@@ -53,11 +53,13 @@ describe('scanLan', () => {
 })
 
 describe('firewall command', () => {
-  it('allows the program on private and domain networks only', () => {
+  it('first clears every rule of the program (block rules too), then allows it on any profile but only from LAN addresses', () => {
     const c = firewallCommand('C:\\Program Files\\Mirror Studio\\Mirror Studio.exe')
     expect(c).toContain('program="C:\\Program Files\\Mirror Studio\\Mirror Studio.exe"')
-    expect(c).toContain('profile=private,domain')
-    expect(c).not.toContain('public')
+    expect(c).toContain('profile=any')
+    expect(c).toContain('remoteip=localsubnet,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16')
+    expect(c.split('\n')[0]).toContain('delete rule name=all program=')
+    expect(c.split('\n')).toHaveLength(2)
   })
 })
 

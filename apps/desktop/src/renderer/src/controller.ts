@@ -1,6 +1,6 @@
 import type { AssignableRole, ControlHealth, ControlInput, ServerMessage, SessionState } from '@mirror-studio/protocol'
 import { useUi, notify } from './store'
-import { Guest, Hub, captureScreen, type View } from './media'
+import { Guest, Hub, captureScreen, type RelayReason, type View } from './media'
 
 /**
  * Glue between the main process (meeting events) and the media engine. The window holds no authority:
@@ -35,6 +35,9 @@ export function init() {
     else if (e.t === 'rtc-in') void hub?.onSignal(e.from, e.kind, e.data)
     else if (e.t === 'closed') leaveLocal(e.reason)
     else if (e.t === 'notice') notify(e.text)
+    else if (e.t === 'media-in') { if (hub) hub.onMedia(e.from, e.stream, e.data); else guest?.onMedia(e.stream, e.data) }
+    else if (e.t === 'media-mode') hub?.onMediaMode(e.from)
+    else if (e.t === 'net-changed') void refreshNet().catch(() => {})
   })
   ready = boot()
   void window.studio.theme().then((theme) => set({ theme }))
@@ -62,6 +65,14 @@ export async function scan() {
   try { set({ found: await window.studio.discover() }) } finally { set({ scanning: false }) }
 }
 export const refreshNet = () => window.studio.netInfo().then((net) => set({ net }))
+/** "Reparar firewall" in the network help: one administrator prompt, then the help shows the new state. */
+export async function repairFirewall() {
+  const r = await window.studio.repairFirewall()
+  if (r?.repair === 'done' && r.status === 'ok') notify('Firewall reparado.')
+  else if (r?.repair === 'declined') notify('Hace falta aceptar el permiso de administrador para reparar el firewall.')
+  else notify('No se pudo reparar el firewall desde aquí. Usa el comando de la ayuda en una consola de administrador.')
+  await refreshNet()
+}
 
 // ---- entering and leaving ------------------------------------------------------------------------
 
@@ -90,7 +101,7 @@ export function leave() { void window.studio.leave() }
 function leaveLocal(reason: string) {
   hub?.close(); hub = null; guest?.close(); guest = null
   releaseScreen(); clearInterval(statsTimer)
-  set({ phase: 'home', intent: null, state: null, me: '', hostInfo: null, asks: [], presentation: null, controlView: null, sharing: false, localPreview: null, rtt: undefined })
+  set({ phase: 'home', intent: null, state: null, me: '', hostInfo: null, asks: [], presentation: null, controlView: null, sharing: false, localPreview: null, rtt: undefined, relayCount: 0 })
   notify(reason)
   void scan()
 }
@@ -129,6 +140,7 @@ function onMessage(m: ServerMessage) {
       if (awaitingPresent) { awaitingPresent = false; releaseScreen() } // our request to present was refused
       break
     case 'rtc': void guest?.onSignal(m.kind, m.data); break
+    case 'media-mode': guest?.enableRelay('peer', false); break
     case 'closed': break // the main process follows with a 'closed' UI event
   }
 }
@@ -152,10 +164,31 @@ function onState(state: SessionState) {
 function startMedia(me: string, state: SessionState) {
   const setView = (v: View) => set({ presentation: v.presentation, controlView: v.control })
   if (ui().intent?.kind === 'host') {
-    hub = new Hub(me, (to, kind, data) => void window.studio.rtcOut(to, kind, data), setView)
+    hub = new Hub(me, (to, kind, data) => void window.studio.rtcOut(to, kind, data), setView, {
+      mediaOut: (to, stream, frame) => window.studio.mediaOut(to, stream, frame),
+      modeOut: (to, reason) => void window.studio.mediaModeOut(to, reason),
+      onRelay: (id, reason) => {
+        console.warn('[media] relay on for', id, reason)
+        set({ relayCount: hub?.relayCount ?? 0 })
+        const who = ui().state?.participants.find((p) => p.id === id)?.name ?? 'Un participante'
+        notify(`${who}: el firewall bloquea el vídeo rápido (UDP). Se le envía por el modo compatible (TCP).`)
+      }
+    })
     hub.apply(state)
   } else {
-    guest = new Guest((kind, data) => send({ t: 'rtc', kind, data }), setView)
+    guest = new Guest((kind, data) => send({ t: 'rtc', kind, data }), setView, {
+      expect: () => {
+        const s = ui().state, me = ui().me
+        return { presentation: !!s?.presenter && s.presenter !== me, control: !!s?.controls.some((c) => c.controller === me) }
+      },
+      mediaOut: (stream, frame) => window.studio.mediaOut('host', stream, frame),
+      modeOut: (reason) => send({ t: 'media-mode', relay: true, reason }),
+      onRelay: (reason: RelayReason) => {
+        console.warn('[media] relay on', reason)
+        set({ relayCount: 1 })
+        notify('El vídeo rápido (UDP) no llega a esta PC, probablemente por el firewall. Se cambió solo al modo compatible (TCP).')
+      }
+    })
     void guest.start()
     statsTimer = window.setInterval(async () => set({ rtt: (await guest?.stats())?.rtt }), 2000)
   }

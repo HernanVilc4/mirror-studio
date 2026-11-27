@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import WebSocket, { WebSocketServer } from 'ws'
 import {
-  MAX_MESSAGE_BYTES, PROTOCOL_VERSION, parseClient, parseHandshake, parseServer,
+  MAX_MESSAGE_BYTES, MEDIA_STREAM, MEDIA_TAG, MediaAssembler, PROTOCOL_VERSION, parseClient, parseHandshake, parseServer, splitMedia,
   type ClientMessage, type ServerMessage
 } from '@mirror-studio/protocol'
 import { ClientHandshake, HostHandshake, generateSalt, PBKDF2_ITERATIONS, type SecureChannel } from '@mirror-studio/protocol/src/node'
@@ -16,6 +16,29 @@ export const MAX_PENDING_HANDSHAKES = 16
 
 const send = (ws: WebSocket, o: object) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(o))
 
+/**
+ * Bytes waiting in a socket above which a relayed video frame is dropped instead of queued. Low latency beats
+ * completeness: a frame that waits behind others is already old, and the next key frame repairs the picture.
+ */
+export const MEDIA_BACKLOG = 1_500_000
+/**
+ * Sends one encoded frame as sealed pieces. False (nothing sent) when the socket is backed up. After a drop, the
+ * delta frames that follow are dropped too until a key frame (byte 1, bit 0 of the window's frame header, see
+ * media-relay.ts): a delta whose reference never arrived would only paint garbage.
+ */
+export function sendMediaOver(ws: WebSocket, ch: SecureChannel, stream: number, seq: number, frame: Uint8Array, waitKey: Set<number>): boolean {
+  const key = frame.length > 1 && (frame[1] & 1) === 1
+  if (ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > MEDIA_BACKLOG) { waitKey.add(stream); return false }
+  if (waitKey.has(stream) && !key) return false
+  waitKey.delete(stream)
+  for (const piece of splitMedia(stream, seq, frame)) ws.send(ch.sealBytes(piece))
+  return true
+}
+
+/** The host answers this (close code 4429) when too many handshakes run at once; the client retries by itself. */
+export const BUSY = 'El anfitrión está ocupado, intenta de nuevo'
+/** Tries in total when the host is busy (a whole class pressing "Unirse" at the same moment). */
+export const BUSY_RETRIES = 12
 export const VERSION_MISMATCH = 'Esta PC y el anfitrión tienen versiones distintas de Mirror Studio. Actualicen todas las PCs a la misma versión.'
 /** A hello from another protocol version: it would fail validation with a cryptic error, so it gets a clear one. */
 function otherVersion(text: string): boolean {
@@ -68,13 +91,22 @@ export class MeetingServer {
     let channel: SecureChannel | undefined
     let id: string | null = null
     let counted = false
+    const media = new MediaAssembler()
+    let mediaSeq = 0
+    const mediaWait = new Set<number>()
     const release = () => { if (counted) { counted = false; this.pending-- } }
     const reject = (reason: string, code = 4403) => { send(ws, { t: 'reject', reason }); ws.close(code) }
     const timer = setTimeout(() => stage !== 'open' && ws.close(4000, 'handshake timeout'), HANDSHAKE_TIMEOUT_MS)
 
     ws.on('message', (data, isBinary) => {
       if (stage === 'open') {
-        const plain = isBinary ? channel!.open(data as Buffer) : null
+        const plain = isBinary ? channel!.openBytes(data as Buffer) : null
+        if (plain && plain[0] === MEDIA_TAG) {
+          let f: ReturnType<MediaAssembler['push']>
+          try { f = media.push(plain) } catch { ws.close(4400, 'bad media'); return }
+          if (f) this.meeting.media(id!, f.stream, f.frame)
+          return
+        }
         const m = plain === null ? null : parseClient(plain)
         if (!m || !m.ok) { ws.close(4400, 'bad frame'); return }
         this.meeting.handle(id!, m.value as ClientMessage)
@@ -93,7 +125,7 @@ export class MeetingServer {
       if (m.t === 'hello' && stage === 'init') {
         if (this.blocked(ip)) return reject('Demasiados intentos. Espera un minuto.')
         if (this.meeting.isClosed) return reject('La reunión terminó')
-        if (this.pending >= MAX_PENDING_HANDSHAKES) return reject('El anfitrión está ocupado, intenta de nuevo', 4429)
+        if (this.pending >= MAX_PENDING_HANDSHAKES) return reject(BUSY, 4429)
         this.pending++; counted = true
         hs = new HostHandshake(this.code, this.salt, this.iterations)
         const reply = hs.onHello(m)
@@ -108,7 +140,8 @@ export class MeetingServer {
         send(ws, ok.ok)
         id = this.meeting.join(hs.clientName, {
           send: (msg) => ws.readyState === WebSocket.OPEN && ws.send(ch.seal(JSON.stringify(msg))),
-          close: () => ws.close(1000)
+          close: () => ws.close(1000),
+          sendMedia: (stream, frame) => sendMediaOver(ws, ch, stream, mediaSeq++, frame, mediaWait)
         })
         if (!id) { ws.send(ch.seal(JSON.stringify({ t: 'closed', reason: 'La reunión está llena' }))); ws.close(1000); return }
         stage = 'open'; return
@@ -132,14 +165,30 @@ export function probeInfo(host: string, port: number, timeoutMs = 1500): Promise
   })
 }
 
-/** Events: 'message'(ServerMessage), 'closed'(reason). */
+/** Events: 'message'(ServerMessage), 'media'(stream, frame), 'closed'(reason). */
 export class MeetingClient extends EventEmitter {
   private ws?: WebSocket
   private channel?: SecureChannel
   private closedOnce = false
+  private media = new MediaAssembler()
+  private mediaSeq = 0
+  private mediaWait = new Set<number>()
 
-  /** Resolves once the host has proven it knows the code too. Rejects with a user-facing message. */
-  connect(host: string, port: number, code: string, name: string, iterations = PBKDF2_ITERATIONS): Promise<void> {
+  /**
+   * Resolves once the host has proven it knows the code too. Rejects with a user-facing message.
+   * "Host busy" is not shown: with 35 PCs joining at once the host only takes 16 handshakes at a time, so the
+   * others wait a random moment (growing with each try) and try again.
+   */
+  async connect(host: string, port: number, code: string, name: string, iterations = PBKDF2_ITERATIONS): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try { return await this.connectOnce(host, port, code, name, iterations) } catch (e) {
+        if ((e as Error).message !== BUSY || attempt >= BUSY_RETRIES) throw e
+        await new Promise((r) => setTimeout(r, 150 + Math.random() * 250 * Math.min(attempt, 6)))
+      }
+    }
+  }
+
+  private connectOnce(host: string, port: number, code: string, name: string, iterations: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const ws = (this.ws = new WebSocket(`ws://${host}:${port}`, { maxPayload: MAX_MESSAGE_BYTES, handshakeTimeout: HANDSHAKE_TIMEOUT_MS }))
       const hs = new ClientHandshake(code, name, iterations)
@@ -151,7 +200,14 @@ export class MeetingClient extends EventEmitter {
       ws.on('error', () => fail(`No se pudo conectar con ${host}:${port}. ¿Está abierta la reunión y permite el firewall el puerto ${port}?`))
       ws.on('message', (data, isBinary) => {
         if (this.channel) {
-          const plain = isBinary ? this.channel.open(data as Buffer) : null
+          const plain = isBinary ? this.channel.openBytes(data as Buffer) : null
+          if (plain && plain[0] === MEDIA_TAG) {
+            let f: ReturnType<MediaAssembler['push']>
+            try { f = this.media.push(plain) } catch { this.finish('Mensaje inválido del anfitrión'); ws.terminate(); return }
+            // The host only sends what this PC watches: the presentation and the screen of the PC it controls.
+            if (f && (f.stream === MEDIA_STREAM.presentation || f.stream === MEDIA_STREAM.control)) this.emit('media', f.stream, f.frame)
+            return
+          }
           const m = plain === null ? null : parseServer(plain)
           if (!m || !m.ok) { this.finish('Mensaje inválido del anfitrión'); ws.terminate(); return }
           this.emit('message', m.value as ServerMessage)
@@ -178,7 +234,8 @@ export class MeetingClient extends EventEmitter {
         clearTimeout(timer)
         // An older host cannot parse our hello and just closes with 4400: almost always a version mismatch.
         if (!ready) { ready = true; reject(new Error(code === 4400 ? VERSION_MISMATCH : 'Conexión cerrada antes de entrar')) }
-        this.finish('Conexión cerrada')
+        // Only a socket that got in ends the meeting; a failed (or retried) attempt is reported by the rejection.
+        if (this.ws === ws && this.channel) this.finish('Conexión cerrada')
       })
     })
   }
@@ -187,6 +244,11 @@ export class MeetingClient extends EventEmitter {
     if (!this.channel || this.ws?.readyState !== WebSocket.OPEN) return false
     this.ws.send(this.channel.seal(JSON.stringify(msg)))
     return true
+  }
+  /** TCP video relay: this PC's screen to the host. False when dropped (not connected, or the link is backed up). */
+  sendMedia(stream: number, frame: Uint8Array): boolean {
+    if (!this.channel || !this.ws) return false
+    return sendMediaOver(this.ws, this.channel, stream, this.mediaSeq++, frame, this.mediaWait)
   }
   close() { try { this.send({ t: 'leave' }) } catch { /* already closed */ } this.ws?.close(); this.finish('Saliste de la reunión') }
   private finish(reason: string) { if (!this.closedOnce) { this.closedOnce = true; this.emit('closed', reason) } }
