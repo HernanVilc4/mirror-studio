@@ -92,6 +92,13 @@ export function parseFirewall(stdout: string, exePath: string, port: number): 'o
   return mine.some(allows) ? 'ok' : 'missing'
 }
 
-/** Command an administrator runs once, shown in the app and in the firewall guide. */
+/** Addresses the rule accepts: the local subnet and private ranges, never the Internet. */
+export const FIREWALL_REMOTE = 'localsubnet,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
+/**
+ * Commands an administrator runs once, shown in the app and in the firewall guide. The first one deletes every rule
+ * for the program, including the BLOCK rules Windows creates when its alert is cancelled (they beat any allow).
+ * All profiles: lab networks are often classified "Public"; the address filter keeps it LAN-only.
+ */
 export const firewallCommand = (exePath: string) =>
-  `netsh advfirewall firewall add rule name="Mirror Studio" dir=in action=allow program="${exePath}" enable=yes profile=private,domain`
+  `netsh advfirewall firewall delete rule name=all program="${exePath}"\n` +
+  `netsh advfirewall firewall add rule name="Mirror Studio" dir=in action=allow program="${exePath}" enable=yes profile=any remoteip=${FIREWALL_REMOTE}`

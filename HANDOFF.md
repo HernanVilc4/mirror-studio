@@ -1,8 +1,65 @@
 # Handoff — Mirror Studio (Windows, solo PC a PC en LAN)
 
+Actualizado: 27 de noviembre de 2026 (sesión «pantalla negra y velocidad»). Lo del 23 sigue abajo, desde «0. Retomar aquí (sesión del 23)».
+
+## 00. Sesión del 27-nov: pantalla negra en algunas PCs + vídeo lento (código hecho, falta probar entre 2 PCs reales)
+
+### Síntoma reportado
+- Con el `.exe` de la release v0.1.0, algunas PCs **entran a la reunión pero ven la pantalla en negro**. Otras sí ven.
+- El vídeo va lento aunque la red es Ethernet.
+
+### Diagnóstico (leyendo el código)
+- Unirse va por **TCP 47800** (WebSocket cifrado). La imagen va por **WebRTC/UDP con puertos dinámicos**, sin STUN/TURN (`media.ts`, `ICE = { iceServers: [] }`).
+  - Si el UDP entre las dos PCs no pasa, la reunión «funciona» pero el vídeo nunca llega: **pantalla negra**. No hay ningún plan B.
+- Causas reales de que el UDP no pase en unas PCs y en otras sí:
+  1. El instalador crea la regla solo para perfil **Privado y Dominio**. Si la red del laboratorio está como **Pública**, la regla no aplica.
+  2. El **zip portable** no crea ninguna regla. Windows muestra el aviso «Alerta de seguridad»; si alguien pulsa *Cancelar* o no es administrador, Windows crea **reglas de BLOQUEO** para el programa, y un bloqueo gana a cualquier permiso.
+  3. Reglas a mano solo por puerto TCP 47800 (como la PC de pruebas del 23-nov): el UDP sigue cerrado.
+  4. Firewalls de antivirus (ESET, Kaspersky…) o GPO con «no aplicar reglas locales»: la app no puede arreglarlos.
+- Velocidad: WebRTC negocia **VP8 por defecto**, que en Chromium se codifica **por software (CPU)**. El anfitrión además re-codifica una vez por espectador. Ese es el cuello, no la red.
+
+### Plan
+1. **Firewall que se auto-repara** (`main/firewall.ts`): diagnostica reglas de bloqueo, falta de permiso y perfil de red; si hace falta, pide UAC una vez y lo deja bien (quita bloqueos, regla para cualquier perfil limitada a IPs privadas).
+2. **Plan B de vídeo por TCP** (el «garantizado»): si WebRTC no conecta o no llegan fotogramas en unos segundos, esa conexión pasa sola a vídeo **WebCodecs H.264 por hardware** sobre el mismo WebSocket cifrado del puerto 47800. Si pudiste entrar, ves la imagen.
+3. **Rendimiento**: H.264 preferido (codificador por hardware: NVENC/QuickSync/AMF vía Media Foundation), jitter buffer mínimo, 60 fps en salas pequeñas.
+
+### Hecho (27-nov) — sin commit todavía, todo en el working tree
+- **Protocolo v4** (`packages/protocol/src/index.ts`): mensaje `media-mode` (ambos sentidos) y trozos binarios de vídeo (`MEDIA_TAG`, `splitMedia`, `MediaAssembler`). Un fotograma se parte en trozos de 48 KB, así el tope de 64 KB sigue valiendo y el control remoto se cuela entre trozos. **Todas las PCs deben tener la misma versión** (v3 ↔ v4 se rechaza con mensaje claro).
+- `SecureChannel` (`node.ts`): `sealBytes` / `openBytes` (mismo AES-GCM con contador).
+- **Main** (`meeting.ts`, `meeting-net.ts`, `app-session.ts`): enruta los fotogramas; el anfitrión solo acepta de un participante su propia pantalla (stream 3). **Contrapresión**: si el socket tiene >1,5 MB pendientes, el fotograma se descarta, y también los delta siguientes hasta un fotograma clave (`sendMediaOver`).
+- **Relé de vídeo** (`renderer/src/media-relay.ts`): `RelaySender` (MediaStreamTrackProcessor → VideoEncoder H.264 `prefer-hardware`, `latencyMode: 'realtime'`, sin B-frames, clave cada 2 s o tras una pérdida; si el hardware falla baja a Baseline/VP8) y `RelayReceiver` (VideoDecoder → MediaStreamTrackGenerator; si el decodificador GPU falla, pasa a software).
+- **Vigilante** (`media.ts`, `Guest.check` / `Hub.check`, cada 1 s): pasa ese enlace al relé si WebRTC no conecta en 5 s, si queda `failed`, si cae >5 s, o si una imagen que debería verse no decodifica fotogramas en 5–6 s (`StallWatch`). No vuelve a UDP durante la reunión. El audio de la PC sigue por WebRTC (si el UDP está bloqueado, se pierde el audio, no la imagen).
+- **WebRTC más rápido**: `setCodecPreferences` con H.264 primero (High, luego Baseline, luego VP8/VP9), `jitterBufferTarget = 0`, prioridad alta, 60 fps con ≤3 espectadores (30 con ≤8, 15 más). Captura hasta 60 fps.
+- **Firewall auto-reparable** (`main/firewall.ts`): al abrir la app (en segundo plano) lee con PowerShell las reglas del exe, los perfiles y la categoría de la red. Si hay **bloqueo**, falta permiso o el perfil activo (p. ej. Público) no está cubierto, pide **un UAC** y: borra todas las reglas del exe (incluidas las de bloqueo), crea `Mirror Studio` entrante, todos los perfiles, **solo IPs privadas** (`LocalSubnet,10/8,172.16/12,192.168/16`). Si una GPO ignora reglas locales, lo dice (el relé TCP cubre ese caso). `MS_NO_FIREWALL_FIX=1` desactiva la reparación automática.
+- Instalador (`build/installer.nsh`) y comando manual (`network.ts firewallCommand`) hacen lo mismo con `netsh`.
+- UI: ayuda de red muestra estado del firewall, motivos y botón «Reparar firewall»; en la sala sale la etiqueta «modo compatible (TCP)» cuando un enlace usa el relé.
+- `index.ts`: `enable-features=MediaFoundationH264Encoding,AllowWgcScreenCapturer,AllowWgcWindowCapturer`. **No** se fuerza `ignore-gpu-blocklist` a propósito: un driver en la lista negra es justo el que decodifica en negro.
+
+### Verificado (27-nov, en la PC Windows 10 de esta sesión)
+- Tests: protocolo 29 ✓; escritorio 141 ✓ (incluido `load.test.ts`, que fallaba antes de esta sesión).
+- Typecheck ✓ y `electron-vite build` ✓.
+- `diagnoseFirewall` probado contra el firewall real de esta PC (lee reglas, perfil Private, ~2–3 s).
+- **Arnés Electron real** (Hub + Guest de `media.ts` en una ventana, fuente animada 1280×720 a 30 fps):
+  - UDP roto a propósito (se descartan los candidatos ICE): a los ~6 s pasa solo al relé y se ven **30 fps** a 1280 px.
+  - UDP normal: se queda en WebRTC, negocia **video/H264**, 30 fps.
+  - El arnés quedó en el scratchpad de la sesión (no en el repo). Para rehacerlo: bundle de `media.ts` con esbuild + ventana Electron visible (oculta limita los timers a 1 fps y falsea la medida).
+
+- **E2E en dos procesos** (`apps/desktop/scripts/e2e-relay/`, instrucciones en `run.cjs`): un Electron anfitrión y otro invitado, con el `AppSession` real (WebSocket cifrado, handshake con código, trozos y contrapresión) y `Hub`/`Guest` reales. El anfitrión pinta su reloj en la imagen y el invitado mide el retardo pantalla→pantalla:
+  - **UDP bloqueado** (se descartan los candidatos ICE): relé TCP solo, 1280 px, **30 fps**, retardo **p50 18 ms / p95 24 ms**. Primera imagen a ~8 s del arranque (~5 s tras entrar).
+  - **UDP normal**: WebRTC H.264, 30 fps, p50 35 ms / p95 54 ms.
+  - Limitación: ambos procesos en la misma PC (loopback); el firewall de Windows no filtra loopback, por eso el bloqueo se simula descartando ICE.
+- **«Anfitrión ocupado» con 35 PCs a la vez** (era el fallo de `load.test.ts`, real en un aula): `MeetingClient.connect` reintenta solo, con espera aleatoria creciente, hasta 12 veces. Un intento fallido ya no emite `closed`. `load.test.ts` pasa: 35 unidos en ~0,6 s. Total: **141 tests ✓**.
+
+### Pendiente / siguiente paso
+1. Probar con **2 PCs reales**: una con el firewall bloqueando (p. ej. cancelar la alerta de Windows o regla de bloqueo para el exe) → debe verse la imagen con la etiqueta «modo compatible (TCP)».
+2. Probar que el UAC de la reparación sale una sola vez y que tras aceptarlo `Get-NetFirewallRule -DisplayName "Mirror Studio"` muestra Profile Any.
+3. Instalador nuevo ya generado (27-nov, sin firmar): `release/Mirror Studio Setup 0.1.0.exe` (arranca bien, probado con `MS_NO_FIREWALL_FIX=1`). Falta subirlo a GitHub como release; **todas** las PCs deben actualizar (protocolo v4). Nota: en esta PC `npm run …` por workspaces falla con el Node portátil; se usó `electron-vite build` + `electron-builder --win` desde `apps/desktop`.
+4. No hecho a propósito: 4:4:4 (Chromium/WebRTC solo codifican 4:2:0 por hardware), captura DXGI propia en Rust (Chromium ya usa WGC/DXGI; reescribir la app no compensa), audio por el relé TCP.
+5. ~~`load.test.ts`~~ resuelto con reintento en el cliente (ver arriba).
+
 Actualizado: 23 de noviembre de 2026 (sesión de pruebas reales Windows ↔ Ubuntu). La versión del 22 sigue abajo, desde la sección 1.
 
-## 0. Retomar aquí (sesión del 23 de noviembre)
+## 0. Retomar aquí (sesión del 23)
 
 ### Cómo arrancar
 ```

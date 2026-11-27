@@ -32,6 +32,8 @@ export interface Ui {
   /** My own presentation, to show it back to me (the "mirror"). Null while not presenting. */
   localPreview: MediaStream | null
   rtt?: number
+  /** Links whose video goes through the TCP relay (participant: 0 or 1; host: how many participants). */
+  relayCount: number
   /** Current theme and the OS it follows when set to "Sistema" (Windows 10/11, Ubuntu…). */
   theme: ThemeInfo | null
   /** Start-up failed (network info could not be read): shown with a retry button. */
@@ -43,7 +45,7 @@ let n = 0
 export const useUi = create<Ui>((set) => ({
   phase: 'home', intent: null, myName: '', busy: false, error: '',
   net: null, found: [], scanning: false, hostInfo: null, state: null, me: '', notices: [], asks: [],
-  presentation: null, controlView: null, controlHealth: null, sharing: false, localPreview: null, theme: null, bootError: '',
+  presentation: null, controlView: null, controlHealth: null, sharing: false, localPreview: null, theme: null, bootError: '', relayCount: 0,
   set: (p) => set(p)
 }))
 

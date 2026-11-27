@@ -23,7 +23,7 @@ const out = path.join(root, 'release'), dir = path.join(out, 'Mirror-Studio-win3
   fs.cpSync(path.join(app, 'out'), path.join(a, 'out'), { recursive: true })
   fs.mkdirSync(path.join(a, 'build'), { recursive: true }); fs.copyFileSync(path.join(app, 'build/icon.png'), path.join(a, 'build/icon.png'))
   fs.cpSync(path.join(root, 'node_modules/ws'), path.join(a, 'node_modules/ws'), { recursive: true }) // the only runtime dependency left external
-  fs.writeFileSync(path.join(a, 'package.json'), JSON.stringify({ name: 'mirror-studio', version: '0.1.0', main: 'out/main/index.js' }, null, 2))
+  fs.writeFileSync(path.join(a, 'package.json'), JSON.stringify({ name: 'mirror-studio', version: '0.2.0', main: 'out/main/index.js' }, null, 2))
   fs.copyFileSync(path.join(root, 'docs/FIREWALL.md'), path.join(dir, 'FIREWALL.md'))
   const zipOut = path.join(out, 'Mirror-Studio-win32-x64.zip'); fs.rmSync(zipOut, { force: true })
   execFileSync('zip', ['-qr', zipOut, path.basename(dir)], { cwd: out })

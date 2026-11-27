@@ -385,8 +385,14 @@ function NetworkHelp({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col gap-3 text-sm text-muted">
         <p>MirrorStudio funciona entre PCs de la <b className="text-fg">misma red local</b>: cable Ethernet, Wi-Fi o un mismo hotspot (el cable es lo más estable). El puerto es <b className="text-fg">{net.port}</b> (TCP).</p>
         <p>Direcciones de este equipo: {net.ifaces.length ? net.ifaces.map((i) => <code key={i.address} className="mr-2 rounded bg-bg px-1">{i.name}: {i.address}</code>) : 'ninguna'}</p>
-        <p>Si otros equipos no pueden unirse, permite el programa en el firewall de Windows (como administrador, una sola vez):</p>
-        <code className="select-all break-all rounded bg-bg p-2 text-xs text-fg">{net.firewallCommand}</code>
+        <p>
+          Firewall de esta PC: {net.firewallChecking ? <b className="text-fg">comprobando…</b> : net.firewall === 'ok' ? <b className="text-ok">listo</b> : net.firewall === 'missing' ? <b className="text-warn">bloquea el vídeo</b> : <b className="text-fg">no se pudo comprobar</b>}.
+          {' '}Mirror Studio lo revisa al abrirse y, si algo bloquea, lo arregla pidiendo permiso de administrador una vez. Si aun así el vídeo rápido (UDP) no pasa, la imagen se envía sola por el modo compatible (TCP).
+        </p>
+        {net.firewallReasons.length > 0 && <ul className="list-disc pl-5 text-xs">{net.firewallReasons.map((r) => <li key={r}>{r}</li>)}</ul>}
+        {net.firewall === 'missing' && <div><button className={primary} onClick={() => void C.repairFirewall()}>Reparar firewall</button></div>}
+        <p>A mano (como administrador, una sola vez):</p>
+        <code className="select-all whitespace-pre-wrap break-all rounded bg-bg p-2 text-xs text-fg">{net.firewallCommand}</code>
         <p>Si las PCs están en redes distintas (VLAN), la detección automática no las verá: usa «Unirse con IP y código».</p>
       </div>
       <div className="mt-4 flex justify-end"><button data-autofocus className={primary} onClick={onClose}>Cerrar</button></div>
@@ -426,7 +432,7 @@ function Prep() {
 // ---- Room ------------------------------------------------------------------------------------------
 
 function Room() {
-  const { state, me, hostInfo, presentation, controlView, sharing, rtt, localPreview } = useUi()
+  const { state, me, hostInfo, presentation, controlView, sharing, rtt, localPreview, relayCount } = useUi()
   const self = selfOf(useUi.getState())
   const [picker, setPicker] = useState(false)
   const [side, setSide] = useState(true)
@@ -439,7 +445,7 @@ function Room() {
   return (
     <>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-2 text-sm">
-        <div className="min-w-0"><span className="font-semibold">{state.name}</span><span className="ml-3 text-muted">{state.participants.length} {state.participants.length === 1 ? 'persona' : 'personas'}{rtt !== undefined && ` · ${rtt.toFixed(0)} ms`}</span></div>
+        <div className="min-w-0"><span className="font-semibold">{state.name}</span><span className="ml-3 text-muted">{state.participants.length} {state.participants.length === 1 ? 'persona' : 'personas'}{rtt !== undefined && ` · ${rtt.toFixed(0)} ms`}</span>{relayCount > 0 && <span className="ml-2 rounded-full border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] text-warn" title="El firewall bloquea el vídeo por UDP; la imagen va por la conexión TCP de la reunión.">{hostInfo ? `modo compatible (TCP) · ${relayCount}` : 'modo compatible (TCP)'}</span>}</div>
         <div className="flex items-center gap-2">
           {hostInfo && (
             <div className="flex items-center gap-2" aria-label="Datos para unirse">

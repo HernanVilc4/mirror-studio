@@ -107,22 +107,25 @@ export class SecureChannel {
   private out = 0n; private inn = 0n
   constructor(private sendKey: Buffer, private recvKey: Buffer) {}
   private static nonce(n: bigint) { const b = Buffer.alloc(12); b.writeBigUInt64BE(n, 4); return b }
-  seal(plain: string): Buffer {
+  seal(plain: string): Buffer { return this.sealBytes(Buffer.from(plain, 'utf8')) }
+  /** Same framing for binary payloads (media pieces of the TCP video relay). */
+  sealBytes(plain: Uint8Array): Buffer {
     const n = this.out++
     const c = createCipheriv('aes-256-gcm', this.sendKey, SecureChannel.nonce(n))
-    const ct = Buffer.concat([c.update(plain, 'utf8'), c.final()])
+    const ct = Buffer.concat([c.update(plain), c.final()])
     const head = Buffer.alloc(8); head.writeBigUInt64BE(n)
     return Buffer.concat([head, ct, c.getAuthTag()])
   }
   /** Null on tampering, replay, reordering or truncation. Callers must close the connection. */
-  open(frame: Buffer): string | null {
+  open(frame: Buffer): string | null { return this.openBytes(frame)?.toString('utf8') ?? null }
+  openBytes(frame: Buffer): Buffer | null {
     if (frame.length < 8 + 16) return null
     const n = frame.readBigUInt64BE(0)
     if (n !== this.inn) return null
     try {
       const d = createDecipheriv('aes-256-gcm', this.recvKey, SecureChannel.nonce(n))
       d.setAuthTag(frame.subarray(frame.length - 16))
-      const plain = Buffer.concat([d.update(frame.subarray(8, frame.length - 16)), d.final()]).toString('utf8')
+      const plain = Buffer.concat([d.update(frame.subarray(8, frame.length - 16)), d.final()])
       this.inn++
       return plain
     } catch { return null }

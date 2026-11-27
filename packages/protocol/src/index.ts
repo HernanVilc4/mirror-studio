@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-/** Bumped to 3 for the control health messages: an older host would drop a peer that sends them. */
-export const PROTOCOL_VERSION = 3
+/** Bumped to 4 for the TCP video relay (media-mode + binary media frames): an older host would drop a peer that sends them. */
+export const PROTOCOL_VERSION = 4
 /** Hard cap for any signaling frame (SDP is the largest, ~10 KB). */
 export const MAX_MESSAGE_BYTES = 64 * 1024
 /** Participants per session. A target, not a promise: see the load measurements in HANDOFF.md. */
@@ -129,10 +129,16 @@ export const Rtc = z.object({
   kind: z.enum(['offer', 'answer', 'ice']),
   data: z.string().max(32768)
 })
+/**
+ * WebRTC video for this participant<->host link does not get through (UDP blocked by a firewall, no frames
+ * decoded): from now on its video travels inside the encrypted WebSocket (TCP 47800) as binary media frames
+ * (see MEDIA_TAG below). Either end may switch; it never switches back during the meeting.
+ */
+export const MediaMode = z.object({ t: z.literal('media-mode'), relay: z.literal(true), reason: z.string().max(80).optional() })
 export const Leave = z.object({ t: z.literal('leave') })
 export const ClientMessage = z.discriminatedUnion('t', [
   Kick, SetRole, PresentStart, PresentStop,
-  ControlRequest, ControlRespond, ControlRevoke, ControlSend, ControlStatus, ControlReset, Rtc, Leave
+  ControlRequest, ControlRespond, ControlRevoke, ControlSend, ControlStatus, ControlReset, Rtc, MediaMode, Leave
 ])
 export type ClientMessage = z.infer<typeof ClientMessage>
 
@@ -148,9 +154,66 @@ export const ControlResetIn = z.object({ t: z.literal('control-reset'), from: id
 export const Notice = z.object({ t: z.literal('notice'), text: str(200) })
 export const Closed = z.object({ t: z.literal('closed'), reason: str(200) })
 export const ServerMessage = z.discriminatedUnion('t', [
-  Welcome, StateMsg, ControlAsked, ControlStarted, ControlEnded, ControlInputIn, ControlStatusIn, ControlResetIn, Notice, Closed, Rtc
+  Welcome, StateMsg, ControlAsked, ControlStarted, ControlEnded, ControlInputIn, ControlStatusIn, ControlResetIn, Notice, Closed, Rtc, MediaMode
 ])
 export type ServerMessage = z.infer<typeof ServerMessage>
+
+// ---------------------------------------------------------------------------
+// Binary media frames (TCP video relay). After the handshake every frame is sealed; a JSON message starts
+// with '{', a media piece starts with MEDIA_TAG. One encoded video frame is split into pieces of at most
+// MEDIA_PIECE bytes, so control input slips in between them and every frame stays under the 64 KB cap.
+//   piece: [MEDIA_TAG u8][stream u8][seq u32][index u16][count u16][payload]
+// The reassembled payload is the renderer's encoded frame (see media-relay.ts in the desktop app).
+// ---------------------------------------------------------------------------
+export const MEDIA_TAG = 0x01
+export const MEDIA_PIECE = 48 * 1024
+export const MEDIA_HEADER = 10
+/** Largest encoded frame accepted (a 1440p key frame is far below this). */
+export const MAX_MEDIA_FRAME = 4 * 1024 * 1024
+/** What the host sends a participant (the presentation, the PC it controls) and the participant's own screen. */
+export const MEDIA_STREAM = { presentation: 1, control: 2, screen: 3 } as const
+
+export function splitMedia(stream: number, seq: number, frame: Uint8Array): Uint8Array[] {
+  const count = Math.max(1, Math.ceil(frame.length / MEDIA_PIECE))
+  const out: Uint8Array[] = []
+  for (let i = 0; i < count; i++) {
+    const body = frame.subarray(i * MEDIA_PIECE, (i + 1) * MEDIA_PIECE)
+    const p = new Uint8Array(MEDIA_HEADER + body.length)
+    const v = new DataView(p.buffer)
+    v.setUint8(0, MEDIA_TAG); v.setUint8(1, stream); v.setUint32(2, seq >>> 0); v.setUint16(6, i); v.setUint16(8, count)
+    p.set(body, MEDIA_HEADER)
+    out.push(p)
+  }
+  return out
+}
+
+/**
+ * Puts pieces back together, per stream. A piece of a newer frame drops the unfinished older one: in a live
+ * picture a late frame is worth nothing, the next one is already coming.
+ */
+export class MediaAssembler {
+  private cur = new Map<number, { seq: number; count: number; parts: (Uint8Array | undefined)[]; got: number }>()
+  /** The complete frame, or null while pieces are missing. Throws on a malformed piece (callers drop the peer). */
+  push(piece: Uint8Array): { stream: number; frame: Uint8Array } | null {
+    if (piece.length < MEDIA_HEADER || piece[0] !== MEDIA_TAG) throw new Error('bad media piece')
+    const v = new DataView(piece.buffer, piece.byteOffset, piece.byteLength)
+    const stream = v.getUint8(1), seq = v.getUint32(2), index = v.getUint16(6), count = v.getUint16(8)
+    if (count === 0 || index >= count || (count - 1) * MEDIA_PIECE > MAX_MEDIA_FRAME) throw new Error('bad media piece')
+    let c = this.cur.get(stream)
+    if (!c || c.seq !== seq || c.count !== count) {
+      if (c && ((seq - c.seq) | 0) < 0) return null // an older frame arriving late: ignore it
+      c = { seq, count, parts: new Array(count), got: 0 }
+      this.cur.set(stream, c)
+    }
+    if (!c.parts[index]) { c.parts[index] = piece.subarray(MEDIA_HEADER); c.got++ }
+    if (c.got < c.count) return null
+    this.cur.delete(stream)
+    const frame = new Uint8Array(c.parts.reduce((n, p) => n + p!.length, 0))
+    let o = 0
+    for (const p of c.parts) { frame.set(p!, o); o += p!.length }
+    return { stream, frame }
+  }
+}
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string }
 

@@ -7,7 +7,7 @@ export type { ThemeInfo, ThemeSource }
 
 export interface NetInfo {
   ifaces: { name: string; address: string }[]; chosen: string | null; port: number
-  firewall: 'ok' | 'missing' | 'unknown'; firewallCommand: string; controllable: boolean; systemAudio: boolean; name: string
+  firewall: 'ok' | 'missing' | 'unknown'; firewallReasons: string[]; firewallChecking: boolean; firewallCommand: string; controllable: boolean; systemAudio: boolean; name: string
 }
 export interface FoundMeeting { ip: string; port: number; name: string; host: string; participants: number }
 export interface CaptureSource { id: string; name: string; type: 'screen' | 'window'; thumb: string }
@@ -22,6 +22,10 @@ const api = {
   send: (msg: ClientMessage) => ipcRenderer.invoke('send', msg) as Promise<void>,
   rtcOut: (to: string, kind: 'offer' | 'answer' | 'ice', data: string) => ipcRenderer.invoke('rtc-out', to, kind, data) as Promise<void>,
   leave: () => ipcRenderer.invoke('leave') as Promise<void>,
+  /** TCP video relay: false when the frame was dropped (backed-up link). */
+  mediaOut: (to: string, stream: number, data: Uint8Array) => ipcRenderer.invoke('media-out', to, stream, data) as Promise<boolean>,
+  mediaModeOut: (to: string, reason?: string) => ipcRenderer.invoke('media-mode-out', to, reason) as Promise<void>,
+  repairFirewall: () => ipcRenderer.invoke('firewall-repair') as Promise<{ status: string; reasons: string[]; repair?: string } | null>,
   sources: () => ipcRenderer.invoke('sources') as Promise<CaptureSource[]>,
   pickSource: (id: string | null, audio: boolean) => ipcRenderer.invoke('pick-source', id, audio) as Promise<void>,
   theme: () => ipcRenderer.invoke('theme') as Promise<ThemeInfo>,

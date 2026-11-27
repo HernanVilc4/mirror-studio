@@ -1,12 +1,15 @@
 import { EventEmitter } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import {
-  MAX_PARTICIPANTS, canAssign, canKick, canPresent, canRequestControl, rank,
+  MAX_PARTICIPANTS, MEDIA_STREAM, canAssign, canKick, canPresent, canRequestControl, rank,
   type ClientMessage, type ControlGrant, type Participant, type ServerMessage, type SessionState
 } from '@mirror-studio/protocol'
 
-/** Transport-agnostic endpoint of one participant (a secure WebSocket, or the host's own renderer). */
-export interface Conn { send(msg: ServerMessage): void; close(reason: string): void }
+/**
+ * Transport-agnostic endpoint of one participant (a secure WebSocket, or the host's own renderer).
+ * `sendMedia` (TCP video relay) returns false when the frame was dropped because the link is backed up.
+ */
+export interface Conn { send(msg: ServerMessage): void; close(reason: string): void; sendMedia?(stream: number, frame: Uint8Array): boolean }
 
 interface Member extends Participant { conn: Conn; tokens: number; refilled: number }
 interface Pending { controller: string; target: string; timer: NodeJS.Timeout }
@@ -19,6 +22,7 @@ export const CONTROL_RATE = 400
  * Authoritative state of one meeting. EVERY action is validated here; clients only ask.
  * The creator is the host: when they leave, the meeting ends for everyone.
  * Events: 'state'(SessionState), 'rtc'(participantId, msg), 'closed'(reason),
+ *         'media'(participantId, stream, frame), 'media-mode'(participantId)  -- TCP video relay, for the host's hub
  *         'control-ended'(controllerId, targetId)  -- the target must release held keys/buttons.
  */
 export class MeetingHost extends EventEmitter {
@@ -82,6 +86,18 @@ export class MeetingHost extends EventEmitter {
     this.members.get(to)?.conn.send({ t: 'rtc', kind, data })
   }
 
+  /** TCP video relay, host's hub -> one participant. False when dropped (unknown peer or link backed up). */
+  sendMedia(to: string, stream: number, frame: Uint8Array): boolean {
+    return this.members.get(to)?.conn.sendMedia?.(stream, frame) ?? false
+  }
+  /** The hub switched a participant's link to the TCP relay. */
+  sendMediaMode(to: string, reason?: string) { this.members.get(to)?.conn.send({ t: 'media-mode', relay: true, reason }) }
+  /** A participant's own screen, sent over the TCP relay. Only that stream is accepted from participants. */
+  media(from: string, stream: number, frame: Uint8Array) {
+    if (this.closed || !this.members.has(from) || stream !== MEDIA_STREAM.screen) return
+    this.emit('media', from, stream, frame)
+  }
+
   handle(from: string, msg: ClientMessage) {
     const actor = this.members.get(from)
     if (!actor || this.closed) return
@@ -141,6 +157,7 @@ export class MeetingHost extends EventEmitter {
         this.members.get(msg.target)?.conn.send({ t: 'control-reset', from }); break
       }
       case 'rtc': this.emit('rtc', from, msg); break
+      case 'media-mode': this.emit('media-mode', from); break
       case 'leave': this.leave(from); break
     }
   }

@@ -4,7 +4,8 @@ import { hostname } from 'node:os'
 import { ClientMessage, DEFAULT_PORT, isValidCode, normalizeCode } from '@mirror-studio/protocol'
 import { AppSession, type UiEvent } from './app-session'
 import { createDriver } from './input'
-import { firewallCommand, firewallStatus, listInterfaces, pickInterface, scanLan } from './network'
+import { firewallCommand, listInterfaces, pickInterface, scanLan } from './network'
+import { diagnoseFirewall, ensureFirewall, repairFirewall, type FirewallState } from './firewall'
 import { isThemeSource, loadTheme, paintWindow, setTheme, themeInfo, WINDOW_COLORS } from './theme'
 // Bundled as files next to the build output, so the window keeps its icon in the packaged app too.
 import iconIco from '../../build/icon.ico?asset'
@@ -25,6 +26,11 @@ const windowIcon = () => {
 // Show real LAN addresses in WebRTC candidates. Without this Chromium hides them behind mDNS names that
 // lab networks often do not resolve, and media never connects.
 app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns')
+// Hardware H.264 encoding through Media Foundation (NVENC, Quick Sync, AMF) and the GPU screen capturers
+// (Windows Graphics Capture, frames stay in video memory) instead of GDI copies. Chromium already defaults to
+// these on recent Windows; naming them makes sure. Unknown names are ignored, so this is safe across versions.
+// The GPU blocklist is NOT overridden on purpose: a blocklisted driver is exactly the one that decodes to black.
+app.commandLine.appendSwitch('enable-features', 'MediaFoundationH264Encoding,AllowWgcScreenCapturer,AllowWgcWindowCapturer')
 
 let win: BrowserWindow | null = null
 // Local notices also go to the always-on-top control bar: the main window may be hidden behind what they talk about.
@@ -72,6 +78,21 @@ let wantAudio = false
 // MS_TEST_AUDIO=1 only lets the automated test enable the checkbox on Linux (its capture is faked there).
 const SYSTEM_AUDIO = process.platform === 'win32' || process.env.MS_TEST_AUDIO === '1'
 
+/**
+ * Firewall self-repair (see firewall.ts). It starts at launch, in the background: the home screen does not wait for
+ * it, and it may show ONE Windows administrator prompt when something blocks the video. MS_NO_FIREWALL_FIX=1 skips
+ * the automatic repair (diagnosis only).
+ */
+let firewall: FirewallState | null = null
+const firewallSummary = (f: FirewallState | null) => (!f ? 'unknown' : f.status === 'ok' ? 'ok' : f.status === 'repair' ? 'missing' : 'unknown') as 'ok' | 'missing' | 'unknown'
+function afterFirewall(f: FirewallState) {
+  firewall = f
+  if (f.repair === 'done' && f.status === 'ok') emit({ t: 'notice', text: 'Firewall de Windows configurado para Mirror Studio: la pantalla compartida ya puede llegar a esta PC.' })
+  else if (f.repair === 'declined') emit({ t: 'notice', text: 'No se dio permiso de administrador: el firewall puede bloquear el vídeo. Se usará el modo por TCP si hace falta.' })
+  else if (f.status === 'policy') emit({ t: 'notice', text: 'El firewall de esta PC lo controla el dominio. Si el vídeo no llega por la vía rápida, se usará el modo por TCP.' })
+  emit({ t: 'net-changed' })
+}
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null) // no File/Edit/View bar: this is a call window, not a document editor
   loadTheme()
@@ -114,9 +135,22 @@ app.whenReady().then(() => {
     const ifaces = listInterfaces()
     const chosen = pickInterface(ifaces)
     const exe = app.getPath('exe')
-    return { ifaces, chosen: chosen?.address ?? null, port: DEFAULT_PORT, firewall: await firewallStatus(exe), firewallCommand: firewallCommand(exe), controllable: meeting.canBeControlled, systemAudio: SYSTEM_AUDIO, name: hostname() }
+    return {
+      ifaces, chosen: chosen?.address ?? null, port: DEFAULT_PORT, firewall: firewallSummary(firewall), firewallReasons: firewall?.reasons ?? [],
+      firewallChecking: !firewall && process.platform === 'win32', firewallCommand: firewallCommand(exe), controllable: meeting.canBeControlled, systemAudio: SYSTEM_AUDIO, name: hostname()
+    }
   })
   ipcMain.handle('discover', () => scanLan(DEFAULT_PORT))
+  ipcMain.handle('firewall-repair', async () => {
+    const exe = app.getPath('exe')
+    const repair = await repairFirewall(exe)
+    afterFirewall({ ...(await diagnoseFirewall(exe)), repair })
+    return firewall
+  })
+  // Wait for the window: the result is told to the person in it.
+  w.webContents.once('did-finish-load', () => {
+    void ensureFirewall(app.getPath('exe'), process.env.MS_NO_FIREWALL_FIX !== '1').then(afterFirewall)
+  })
 
   ipcMain.handle('host', async (_e, meetingName: unknown, myName: unknown) => {
     if (typeof meetingName !== 'string' || typeof myName !== 'string') throw new Error('Datos inválidos')
@@ -136,6 +170,13 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('rtc-out', (_e, to: unknown, kind: unknown, data: unknown) => {
     if (typeof to === 'string' && (kind === 'offer' || kind === 'answer' || kind === 'ice') && typeof data === 'string' && data.length < 32768) meeting.rtcOut(to, kind, data)
+  })
+  // TCP video relay (see media-relay.ts): one encoded frame per call, answered with "sent" or "dropped".
+  ipcMain.handle('media-out', (_e, to: unknown, stream: unknown, data: unknown) =>
+    typeof to === 'string' && (stream === 1 || stream === 2 || stream === 3) && data instanceof Uint8Array && data.length <= 4 * 1024 * 1024
+      ? meeting.mediaOut(to, stream, data) : false)
+  ipcMain.handle('media-mode-out', (_e, to: unknown, reason: unknown) => {
+    if (typeof to === 'string') meeting.mediaMode(to, typeof reason === 'string' ? reason.slice(0, 80) : undefined)
   })
   ipcMain.handle('leave', () => meeting.leave())
   ipcMain.handle('sources', async () =>

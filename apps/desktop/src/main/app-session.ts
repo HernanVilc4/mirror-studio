@@ -8,9 +8,15 @@ import { RemoteInput, type InputDriver, type InjectorHealth } from './input'
 export type UiEvent =
   | { t: 'message'; m: ServerMessage }
   | { t: 'rtc-in'; from: string; kind: 'offer' | 'answer' | 'ice'; data: string }
+  /** TCP video relay. On the host `from` is the participant; on a participant it is always 'host'. */
+  | { t: 'media-in'; from: string; stream: number; data: Uint8Array }
+  /** Host only: a participant switched its link to the TCP relay. */
+  | { t: 'media-mode'; from: string }
   | { t: 'closed'; reason: string }
   /** Something only this PC's user needs to read (it never comes from the host). */
   | { t: 'notice'; text: string }
+  /** Network or firewall state changed: the window asks for net-info again. */
+  | { t: 'net-changed' }
 
 /** While this PC is controlled, how often it checks its injector and tells the controller how it is doing. */
 export const HEALTH_MS = 2000
@@ -60,6 +66,8 @@ export class AppSession {
     }
     this.meeting = meeting; this.server = server; this.ended = false
     meeting.on('rtc', (from: string, msg: { kind: 'offer' | 'answer' | 'ice'; data: string }) => this.emit({ t: 'rtc-in', from, kind: msg.kind, data: msg.data }))
+    meeting.on('media', (from: string, stream: number, data: Uint8Array) => this.emit({ t: 'media-in', from, stream, data }))
+    meeting.on('media-mode', (from: string) => this.emit({ t: 'media-mode', from }))
     meeting.on('control-ended', (_c: string, target: string) => { if (target === this.me) this.stopControlled() })
     meeting.on('closed', (reason: string) => this.teardown(reason))
     this.me = meeting.join(myName, { send: (m) => this.onMessage(m), close: () => {} })!
@@ -74,6 +82,7 @@ export class AppSession {
     // A close BEFORE we got in is a failed join, reported by the rejection, not a meeting that ended.
     let joined = false
     client.on('message', (m: ServerMessage) => this.onMessage(m))
+    client.on('media', (stream: number, data: Uint8Array) => this.emit({ t: 'media-in', from: 'host', stream, data }))
     client.on('closed', (reason: string) => { if (joined) this.teardown(reason) })
     this.ended = false
     await client.connect(ip, port, code, myName, this.iterations)
@@ -93,6 +102,17 @@ export class AppSession {
 
   /** Host only: the media hub in the window answers a participant's WebRTC offer. */
   rtcOut(to: string, kind: 'offer' | 'answer' | 'ice', data: string) { this.meeting?.sendRtc(to, kind, data) }
+
+  /**
+   * TCP video relay: one encoded frame from the window. The host sends it to participant `to`; a participant
+   * sends its own screen to the host (`to` is ignored). False when it was dropped: the window then sends a key frame.
+   */
+  mediaOut(to: string, stream: number, data: Uint8Array): boolean {
+    if (this.meeting) return this.meeting.sendMedia(to, stream, data)
+    return this.client?.sendMedia(stream, data) ?? false
+  }
+  /** Host only: tells a participant that its link now uses the TCP relay. */
+  mediaMode(to: string, reason?: string) { this.meeting?.sendMediaMode(to, reason) }
 
   leave() {
     if (this.meeting) this.meeting.leave(this.me)
