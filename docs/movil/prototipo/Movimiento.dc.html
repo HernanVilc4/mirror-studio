@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Movimiento y tipografía</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ms.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}.mv{display:grid;grid-template-columns:200px 170px 1fr 150px;gap:16px;padding:10px 0;border-top:1px solid var(--line)}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+</helmet>
+<div class="screen" style="width:1500px;height:1180px;background:var(--surface);animation:none;padding:32px 40px;gap:12px">
+  <h1 class="display">Movimiento y tipografía</h1>
+  <p class="muted" style="max-width:1100px">Breves, silenciosas y con sentido; sin rebotes. Curva por defecto: desaceleración cúbica suave. Si el teléfono tiene «Reducir animaciones», todo se resuelve con fundidos de 120 ms, sin desplazamientos. La entrada de la marca sigue el kit «Doble Erre» del escritorio.</p>
+  <div class="card" style="flex-direction:row;gap:32px;align-items:center;padding:16px 24px">
+    <div class="col" style="gap:2px"><span class="caption muted">Títulos de marca · Montserrat 700</span><span style="font:700 28px/34px var(--display);letter-spacing:-.01em">Únete a una reunión</span></div>
+    <div class="col" style="gap:2px"><span class="caption muted">Nombre · Montserrat 800</span><span style="font:800 24px/30px var(--display);letter-spacing:-.01em">MirrorStudio</span></div>
+    <div class="col grow" style="gap:2px"><span class="caption muted">Resto de la app · Inter 400 a 600</span><span style="font:600 17px/22px var(--font)">Se usa solo en 5 o 6 títulos para que la marca se reconozca sin cansar.</span></div>
+  </div>
+  <div class="mv" style="border-top:0;padding-top:4px"><span class="label muted">Animación</span><span class="label muted">Cuándo</span><span class="label muted">Qué se ve</span><span class="label muted">Duración</span></div>
+  <div class="mv"><span class="strong">Entrada de la app</span><span class="muted">Al abrir</span><span>La primera erre sube y aparece; la segunda llega desde la izquierda y arriba, como un eco; el nombre aparece al final. La marca queda quieta y se convierte en la del encabezado.</span><span class="muted">≈ 640 ms</span></div>
+  <div class="mv"><span class="strong">Cambio de pantalla</span><span class="muted">Navegar</span><span>La pantalla nueva entra 24 px desde la derecha con fundido. Al volver, al revés.</span><span class="muted">250 ms · ease-out</span></div>
+  <div class="mv"><span class="strong">Unirse</span><span class="muted">Tocar «Entrar»</span><span>El botón se llena como una barra de progreso; al conectar, la sala aparece con fundido y la presentación crece desde el centro.</span><span class="muted">400 ms</span></div>
+  <div class="mv"><span class="strong">QR leído</span><span class="muted">Escáner</span><span>Las cuatro esquinas del visor se cierran sobre el QR y aparece un visto; vibración corta del teléfono.</span><span class="muted">300 ms</span></div>
+  <div class="mv"><span class="strong">Vínculo con la PC</span><span class="muted">Pantalla 15 → 16</span><span>Entre los iconos de PC y teléfono viajan puntos que se juntan en un visto, con un anillo que se expande.</span><span class="muted">700 ms</span></div>
+  <div class="mv"><span class="strong">Siguiente diapositiva</span><span class="muted">Botón o deslizar</span><span>La diapositiva sale a la izquierda y entra la siguiente por la derecha; el contador gira; el botón se hunde al 96 %.</span><span class="muted">220 ms</span></div>
+  <div class="mv"><span class="strong">Puntero láser</span><span class="muted">Mantener pulsado</span><span>El punto rojo con halo aparece bajo el dedo, lo sigue con una estela corta y se desvanece al soltar.</span><span class="muted">120 / 200 ms</span></div>
+  <div class="mv"><span class="strong">Trazos</span><span class="muted">Anotar</span><span>El trazo se dibuja con el dedo; al borrar, los trazos se desvanecen; deshacer quita solo el último.</span><span class="muted">200 ms</span></div>
+  <div class="mv"><span class="strong">Levantar la mano</span><span class="muted">Tocar «Mano»</span><span>La mano sube 12 px y se balancea dos veces (±8°); la tarjeta amarilla se expande. En la lista del docente la fila entra desde arriba.</span><span class="muted">500 ms</span></div>
+  <div class="mv"><span class="strong">Mensaje nuevo</span><span class="muted">Llega al chat</span><span>La burbuja sube 8 px y aparece; el contador del botón «Mensajes» late una vez.</span><span class="muted">180 ms</span></div>
+  <div class="mv"><span class="strong">Encuesta</span><span class="muted">Votar y resultados</span><span>La opción elegida se rellena de azul; en los resultados las barras crecen en cascada, 60 ms entre una y otra.</span><span class="muted">500 ms</span></div>
+  <div class="mv"><span class="strong">Temporizador</span><span class="muted">Se cumple el tiempo</span><span>El reloj parpadea dos veces y el teléfono vibra con dos pulsos cortos.</span><span class="muted">600 ms</span></div>
+  <div class="mv"><span class="strong">Conexión perdida</span><span class="muted">Se corta la red</span><span>El aviso ámbar baja desde arriba, la presentación se atenúa al 35 % y los puntos de «Reconectando…» se animan.</span><span class="muted">300 ms</span></div>
+  <div class="mv"><span class="strong">Mensaje eliminado</span><span class="muted">Docente borra un mensaje</span><span>La burbuja se encoge y se convierte en el contorno punteado «Mensaje eliminado por el docente».</span><span class="muted">200 ms</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1500,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

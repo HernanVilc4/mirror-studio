@@ -2,6 +2,8 @@
 
 Fecha: 27 de noviembre de 2026.
 
+**Para terminar la parte de escritorio: lee `docs/movil/GUIA-ESCRITORIO.md`** (tareas en orden, archivos, reglas, cómo probar y un prompt listo para Claude). Los mockups están en `docs/movil/prototipo/`.
+
 **Estado:**
 - **Protocolo v5 y anfitrión: implementados**, con tests. Están en `packages/protocol` (con los vectores en `packages/protocol/vectors/`) y en `apps/desktop/src/main/meeting.ts` y `meeting-net.ts`. Las decisiones tomadas donde este documento era ambiguo están en `packages/protocol/vectors/README.md` y en los comentarios de `meeting.ts`.
 - **App Android: implementada contra v5.** Pasa los mismos vectores (`apps/android/core/protocol/.../VectorsTest.kt`).

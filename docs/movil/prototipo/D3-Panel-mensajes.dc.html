@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel de mensajes (PC)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ms.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+</helmet>
+<div class="screen" style="width:380px;height:760px;background:var(--surface);animation:none;border:1px solid var(--line);border-radius:16px;padding:20px;gap:12px;box-shadow:0 12px 32px rgba(11,16,32,.12)">
+  <div class="row between"><h1 class="title">Mensajes</h1><div class="row gap8"><button class="round r36" aria-label="Nueva encuesta"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3"/></svg></button><button class="round r36" aria-label="Cerrar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>
+  <div class="seg"><span class="on">Todos</span><span>Preguntas <span class="badge" style="position:static">3</span></span><span>Archivos</span></div>
+  <div class="msg" style="gap:6px;width:100%"><div class="meta">Ana <span class="pill accent" style="padding:2px 6px">Docente</span><span class="caption">10:02</span></div>
+    <p>Descarguen la guía:</p>
+    <div class="att" style="width:100%;background:var(--bg);padding:10px"><svg class="ic accent" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></svg><span class="col grow"><span class="label">Guía-Lab-3.pdf</span><span class="caption muted">PDF · 2,4 MB · se guarda en Descargas/MirrorStudio</span></span><svg class="ic accent" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m2-5 5 5 5-5M12 15V3"/></svg></div>
+  </div>
+  <div class="msg" style="gap:6px;width:100%"><div class="meta">Alumno 1 <span class="pill warn" style="padding:2px 6px">Pregunta</span><span class="caption">10:09</span></div>
+    <p>¿El router también cuenta como host?</p>
+    <div class="row gap8"><span class="pill" style="background:var(--primary);color:#fff">Responder</span><span class="pill">Mostrar a todos</span><span class="pill">Respondida</span></div>
+  </div>
+  <div class="msg" style="gap:6px;width:100%"><div class="meta">Galaxy de Caleb <span class="pill accent" style="padding:2px 6px">Docente</span><span class="caption">10:10</span></div>
+    <div class="att" style="width:100%;background:var(--bg);padding:10px"><svg class="ic accent" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="col grow"><span class="label">Calculadora de subredes</span><span class="caption muted">subnet-calculator.com · se abre al pulsarlo</span></span></div>
+  </div>
+  <div class="sp"></div>
+  <div class="composer"><button class="round" aria-label="Adjuntar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><div class="box" style="background:var(--bg)"><span class="caption accent">Para: Todos ▾</span><span class="muted">Escribe un mensaje…</span></div><button class="round t-primary" aria-label="Enviar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zM21.854 2.147l-10.94 10.939"/></svg></button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":380,"height":760}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

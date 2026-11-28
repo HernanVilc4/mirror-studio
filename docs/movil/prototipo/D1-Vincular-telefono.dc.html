@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Vincular mi teléfono (PC)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ms.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+</helmet>
+<div class="screen" style="width:420px;height:560px;background:var(--surface);animation:none;border:1px solid var(--line);border-radius:16px;padding:20px;align-items:center;gap:14px;box-shadow:0 12px 32px rgba(11,16,32,.12)">
+  <div class="row between" style="align-self:stretch"><h1 class="title">Vincular mi teléfono</h1><button class="round r36" aria-label="Cerrar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <svg width="220" height="220" viewBox="0 0 29 29" role="img" aria-label="Código QR de vinculación" style="background:#fff;border:1px solid var(--line);border-radius:8px">
+    <path fill="#000" fill-rule="evenodd" d="M2 2h7v7H2zM3 3h5v5H3zM4 4h3v3H4zM20 2h7v7h-7zM21 3h5v5h-5zM22 4h3v3h-3zM2 20h7v7H2zM3 21h5v5H3zM4 22h3v3H4z"/>
+    <path fill="#000" d="M10 2h2v1h-2zM13 2h1v3h-1zM15 3h3v1h-3zM10 5h1v2h-1zM12 6h2v2h-2zM16 5h2v2h-2zM14 8h1v1h-1zM10 9h3v1h-3zM15 9h2v2h-2zM2 10h2v1H2zM5 10h1v3H5zM7 11h3v1H7zM11 11h1v3h-1zM13 12h2v1h-2zM18 10h1v4h-1zM20 11h2v1h-2zM23 10h3v1h-3zM2 13h2v2H2zM6 14h2v1H6zM9 13h1v3H9zM12 15h3v1h-3zM16 14h2v2h-2zM20 14h1v3h-1zM22 13h2v2h-2zM25 14h1v4h-1zM10 17h2v1h-2zM13 17h1v3h-1zM15 18h3v1h-3zM19 18h2v1h-2zM22 17h2v2h-2zM10 20h1v2h-1zM12 21h2v2h-2zM15 21h1v4h-1zM17 22h3v1h-3zM21 21h2v1h-2zM24 20h2v2h-2zM10 24h3v1h-3zM18 24h2v2h-2zM22 24h3v1h-3z"/>
+  </svg>
+  <span class="pill accent"><svg class="ic ic16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Solo tú lo ves: no aparece en la presentación</span>
+  <p class="muted tc" style="width:360px">Escanéalo con la app MirrorStudio del teléfono. Caduca en 2:00 y sirve una sola vez.</p>
+  <div class="row gap8 warn label"><span class="dot live" style="background:var(--warn)"></span>Esperando al teléfono<span class="rdots"><i>.</i><i>.</i><i>.</i></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":420,"height":560}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
