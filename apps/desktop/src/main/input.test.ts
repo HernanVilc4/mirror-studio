@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RemoteInput, KEYMAP, INPUT_HELPER_SCRIPT, createWindowsDriver, readProbe, type InputDriver } from './input'
+import { RemoteInput, SLIDE_KEYS, KEYMAP, INPUT_HELPER_SCRIPT, createWindowsDriver, readProbe, type InputDriver } from './input'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -161,4 +161,23 @@ describe.runIf(process.platform === 'win32')('Windows input helper health', () =
     const impatient = createWindowsDriver({ probeMs: 1, bootMs: 0 })
     try { expect(await impatient.probe!()).toEqual({ code: 'restarting' }) } finally { impatient.dispose() }
   }, 90_000)
+})
+
+describe('slide commands from the paired phone', () => {
+  it('presses the key of each action once, without a control grant', () => {
+    const { d, calls } = fake(); const r = new RemoteInput(d)
+    r.slide('next'); r.slide('prev'); r.slide('black'); r.slide('start'); r.slide('end')
+    expect(calls).toEqual([
+      'key 39e down', 'key 39e up', 'key 37e down', 'key 37e up', 'key 66 down', 'key 66 up', 'key 116 down', 'key 116 up', 'key 27 down', 'key 27 up'
+    ])
+    expect(r.active).toBe(false)
+  })
+  it('every action has a key the injector knows', () => {
+    for (const code of Object.values(SLIDE_KEYS)) expect(KEYMAP[code]).toBeDefined()
+  })
+  it('does nothing on platforms that cannot inject input', () => {
+    const { d, calls } = fake(false); const r = new RemoteInput(d)
+    r.slide('next')
+    expect(calls).toEqual([])
+  })
 })

@@ -1,0 +1,114 @@
+{
+  "protocolVersion": 5,
+  "area": "hand",
+  "valid": [
+    {
+      "name": "hand up",
+      "dir": "client",
+      "message": {
+        "t": "hand",
+        "up": true
+      }
+    },
+    {
+      "name": "hand up with a question",
+      "dir": "client",
+      "message": {
+        "t": "hand",
+        "up": true,
+        "text": "¿Puede repetir el ejemplo?"
+      }
+    },
+    {
+      "name": "hand down",
+      "dir": "client",
+      "message": {
+        "t": "hand",
+        "up": false
+      }
+    },
+    {
+      "name": "hand-lower",
+      "dir": "client",
+      "message": {
+        "t": "hand-lower",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6"
+      }
+    },
+    {
+      "name": "state with the hand queue",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "phone",
+              "hand": 2,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "hand without up",
+      "dir": "client",
+      "message": {
+        "t": "hand"
+      },
+      "why": "up is required"
+    },
+    {
+      "name": "hand text too long",
+      "dir": "client",
+      "message": {
+        "t": "hand",
+        "up": true,
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "why": "text max 200"
+    },
+    {
+      "name": "hand empty text",
+      "dir": "client",
+      "message": {
+        "t": "hand",
+        "up": true,
+        "text": ""
+      },
+      "why": "text min 1 when present"
+    },
+    {
+      "name": "hand-lower without target",
+      "dir": "client",
+      "message": {
+        "t": "hand-lower"
+      },
+      "why": "target is required"
+    }
+  ]
+}

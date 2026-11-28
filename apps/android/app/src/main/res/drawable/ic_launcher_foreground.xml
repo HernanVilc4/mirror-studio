@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trazos de idMarca/MirrorStudio-Icono.svg (372x271), centrados en la zona segura de 66dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="26"
+        android:translateY="33.6"
+        android:scaleX="0.1505"
+        android:scaleY="0.1505">
+        <path
+            android:fillColor="#0B1020"
+            android:pathData="M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z" />
+        <path
+            android:fillColor="#0B1020"
+            android:pathData="M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z" />
+    </group>
+</vector>

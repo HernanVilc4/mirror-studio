@@ -1,0 +1,94 @@
+{
+  "protocolVersion": 5,
+  "area": "pairing",
+  "valid": [
+    {
+      "name": "pair-create",
+      "dir": "client",
+      "message": {
+        "t": "pair-create"
+      }
+    },
+    {
+      "name": "pair-claim",
+      "dir": "client",
+      "message": {
+        "t": "pair-claim",
+        "token": "AAECAwQFBgcICQoLDA0ODw"
+      }
+    },
+    {
+      "name": "pair-end",
+      "dir": "client",
+      "message": {
+        "t": "pair-end"
+      }
+    },
+    {
+      "name": "pair-token",
+      "dir": "server",
+      "message": {
+        "t": "pair-token",
+        "token": "AAECAwQFBgcICQoLDA0ODw",
+        "expiresAt": 1795000000000
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "pair-claim without token",
+      "dir": "client",
+      "message": {
+        "t": "pair-claim"
+      },
+      "why": "token is required"
+    },
+    {
+      "name": "pair-claim empty token",
+      "dir": "client",
+      "message": {
+        "t": "pair-claim",
+        "token": ""
+      },
+      "why": "token min 1"
+    },
+    {
+      "name": "pair-claim token too long",
+      "dir": "client",
+      "message": {
+        "t": "pair-claim",
+        "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "why": "token max 32"
+    },
+    {
+      "name": "pair-token without expiresAt",
+      "dir": "server",
+      "message": {
+        "t": "pair-token",
+        "token": "AAECAwQFBgcICQoLDA0ODw"
+      },
+      "why": "expiresAt is required"
+    },
+    {
+      "name": "pair-token fractional expiresAt",
+      "dir": "server",
+      "message": {
+        "t": "pair-token",
+        "token": "AAECAwQFBgcICQoLDA0ODw",
+        "expiresAt": 1.5
+      },
+      "why": "expiresAt is an integer"
+    },
+    {
+      "name": "pair-token from a client",
+      "dir": "client",
+      "message": {
+        "t": "pair-token",
+        "token": "AAECAwQFBgcICQoLDA0ODw",
+        "expiresAt": 1
+      },
+      "why": "host -> client only"
+    }
+  ]
+}

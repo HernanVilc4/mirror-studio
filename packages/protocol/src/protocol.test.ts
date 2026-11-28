@@ -1,11 +1,67 @@
 import { describe, it, expect } from 'vitest'
 import {
   parseClient, parseServer, PROTOCOL_VERSION, parseHandshake, parseControlInput, mapPointToVideo, MAX_MESSAGE_BYTES,
-  canAssign, canKick, canPresent, canRequestControl, isValidCode, normalizeCode, formatCode, CODE_ALPHABET, type Role
+  canAssign, canKick, canPresent, canRequestControl, isValidCode, normalizeCode, formatCode, CODE_ALPHABET, type Role,
+  FILE_CHUNK, FILE_HEADER, FILE_TAG, MAX_FILE_BYTES, PC_CAPS, PHONE_CAPS, blockedFileName, encodeFileChunk, fileChunkCount, isSafeLink,
+  parseFileChunk, validFileName
 } from './index'
-import { ClientHandshake, HostHandshake, SecureChannel, generateCode, generateSalt } from './node'
+import { ClientHandshake, HostHandshake, SecureChannel, generateCode, generatePairToken, generateSalt } from './node'
 
 const IT = 1000 // low PBKDF2 cost for tests; both sides must agree
+
+describe('protocol v5', () => {
+  it('is version 5, and the hello declares the device and its caps', () => {
+    expect(PROTOCOL_VERSION).toBe(5)
+    const pc = new ClientHandshake('AAAAAAAA', 'Ana', IT).hello()
+    expect(pc).toMatchObject({ v: 5, device: 'pc', caps: ['relay', 'overlay', 'files'] })
+    expect(PC_CAPS).toEqual(['relay', 'overlay', 'files'])
+    const phone = new ClientHandshake('AAAAAAAA', 'Ana', IT, 'phone', PHONE_CAPS).hello()
+    expect(phone).toMatchObject({ device: 'phone', caps: ['camera', 'files'] })
+    expect(parseHandshake(JSON.stringify(phone)).ok).toBe(true)
+  })
+  it('present-start defaults its source to screen', () => {
+    expect(parseClient(JSON.stringify({ t: 'present-start' }))).toEqual({ ok: true, value: { t: 'present-start', source: 'screen' } })
+  })
+  it('a pairing token is 16 random bytes in base64url and fits pair-claim', () => {
+    const t = generatePairToken()
+    expect(t).toMatch(/^[A-Za-z0-9_-]{22}$/)
+    expect(t).not.toBe(generatePairToken())
+    expect(parseClient(JSON.stringify({ t: 'pair-claim', token: t })).ok).toBe(true)
+  })
+  it('blocks the listed extensions whatever the case, and trailing dots or spaces', () => {
+    for (const n of ['a.exe', 'A.EXE', 'b.Ps1', 'c.apk', 'd.js', 'e.lnk', 'f.exe.', 'g.exe  ', 'h.tar.dll']) expect(blockedFileName(n), n).toBe(true)
+    for (const n of ['a.pdf', 'a.json', 'exe', 'notas.txt', 'a.jsx']) expect(blockedFileName(n), n).toBe(false)
+  })
+  it('a file name is a plain name', () => {
+    for (const n of ['a/b', 'a\\b', 'C:x', '..', 'a\u0000b', '  ']) expect(validFileName(n), n).toBe(false)
+    expect(validFileName('apuntes clase 3.pdf')).toBe(true)
+  })
+  it('links: only http and https', () => {
+    expect(isSafeLink('https://example.org')).toBe(true)
+    expect(isSafeLink('HTTP://EXAMPLE.ORG')).toBe(true)
+    for (const u of ['javascript:alert(1)', 'file:///C:/x', 'data:text/html,x', 'ftp://x', 'example.org', 'mailto:a@b.c']) expect(isSafeLink(u), u).toBe(false)
+  })
+  it('file chunks: 13-byte big-endian header, round trip, and bounds', () => {
+    const f = encodeFileChunk(0x01020304, 5, 9, new Uint8Array([9, 8]))
+    expect([...f]).toEqual([FILE_TAG, 1, 2, 3, 4, 0, 0, 0, 5, 0, 0, 0, 9, 9, 8])
+    expect(f.length).toBe(FILE_HEADER + 2)
+    const p = parseFileChunk(f)!
+    expect([p.fileId, p.index, p.count, [...p.payload]]).toEqual([0x01020304, 5, 9, [9, 8]])
+    expect(() => encodeFileChunk(1, 0, 1, new Uint8Array(FILE_CHUNK + 1))).toThrow()
+    expect(fileChunkCount(1)).toBe(1)
+    expect(fileChunkCount(FILE_CHUNK)).toBe(1)
+    expect(fileChunkCount(FILE_CHUNK + 1)).toBe(2)
+    expect(parseFileChunk(encodeFileChunk(1, 0, fileChunkCount(MAX_FILE_BYTES) + 1, new Uint8Array(0)))).toBeNull()
+    expect(parseFileChunk(encodeFileChunk(1, 3, 3, new Uint8Array(0)))).toBeNull()
+  })
+  it('host-only v5 messages cannot come from a client, and the other way round', () => {
+    expect(parseClient(JSON.stringify({ t: 'pair-token', token: 'x', expiresAt: 1 })).ok).toBe(false)
+    expect(parseClient(JSON.stringify({ t: 'poll-state', pollId: 'p', question: 'q', options: ['a', 'b'], multi: false, anonymous: false, showResults: 'live', closed: false, total: 0 })).ok).toBe(false)
+    expect(parseClient(JSON.stringify({ t: 'file-accept', fileId: 1 })).ok).toBe(false)
+    expect(parseServer(JSON.stringify({ t: 'msg-send', to: 'all', body: { kind: 'text', text: 'x' } })).ok).toBe(false)
+    expect(parseServer(JSON.stringify({ t: 'hand', up: true })).ok).toBe(false)
+  })
+})
 
 describe('parsing', () => {
   it('accepts valid messages and rejects unknown, malformed, oversize and non-text', () => {
@@ -142,7 +198,7 @@ describe('authenticated handshake', () => {
   })
   it('rejects a bad public key', () => {
     const host = new HostHandshake('AAAAAAAA', generateSalt(), IT)
-    expect(host.onHello({ t: 'hello', v: PROTOCOL_VERSION, pub: 'AAAA', nonce: 'x', name: 'n' })).toBeNull()
+    expect(host.onHello({ t: 'hello', v: PROTOCOL_VERSION, pub: 'AAAA', nonce: 'x', name: 'n', device: 'pc', caps: [] })).toBeNull()
   })
 })
 

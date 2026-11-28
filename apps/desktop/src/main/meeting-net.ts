@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events'
 import WebSocket, { WebSocketServer } from 'ws'
 import {
-  MAX_MESSAGE_BYTES, MEDIA_STREAM, MEDIA_TAG, MediaAssembler, PROTOCOL_VERSION, parseClient, parseHandshake, parseServer, splitMedia,
-  type ClientMessage, type ServerMessage
+  FILE_TAG, MAX_MESSAGE_BYTES, MEDIA_STREAM, MEDIA_TAG, MediaAssembler, PC_CAPS, PROTOCOL_VERSION, parseClient, parseFileChunk, parseHandshake, parseServer, splitMedia,
+  type Cap, type ClientMessage, type Device, type FileChunk, type ServerMessage
 } from '@mirror-studio/protocol'
 import { ClientHandshake, HostHandshake, generateSalt, PBKDF2_ITERATIONS, type SecureChannel } from '@mirror-studio/protocol/src/node'
 import type { MeetingHost } from './meeting'
@@ -39,7 +39,8 @@ export function sendMediaOver(ws: WebSocket, ch: SecureChannel, stream: number, 
 export const BUSY = 'El anfitrión está ocupado, intenta de nuevo'
 /** Tries in total when the host is busy (a whole class pressing "Unirse" at the same moment). */
 export const BUSY_RETRIES = 12
-export const VERSION_MISMATCH = 'Esta PC y el anfitrión tienen versiones distintas de Mirror Studio. Actualicen todas las PCs a la misma versión.'
+export const LOCKED = 'La sala está bloqueada'
+export const VERSION_MISMATCH ='Esta PC y el anfitrión tienen versiones distintas de Mirror Studio. Actualicen todas las PCs a la misma versión.'
 /** A hello from another protocol version: it would fail validation with a cryptic error, so it gets a clear one. */
 function otherVersion(text: string): boolean {
   try { const m = JSON.parse(text) as { t?: unknown; v?: unknown }; return m?.t === 'hello' && m.v !== PROTOCOL_VERSION } catch { return false }
@@ -107,6 +108,10 @@ export class MeetingServer {
           if (f) this.meeting.media(id!, f.stream, f.frame)
           return
         }
+        if (plain && plain[0] === FILE_TAG) {
+          if (!this.meeting.fileChunk(id!, plain)) ws.close(4400, 'bad file chunk')
+          return
+        }
         const m = plain === null ? null : parseClient(plain)
         if (!m || !m.ok) { ws.close(4400, 'bad frame'); return }
         this.meeting.handle(id!, m.value as ClientMessage)
@@ -125,6 +130,7 @@ export class MeetingServer {
       if (m.t === 'hello' && stage === 'init') {
         if (this.blocked(ip)) return reject('Demasiados intentos. Espera un minuto.')
         if (this.meeting.isClosed) return reject('La reunión terminó')
+        if (this.meeting.locked) return reject(LOCKED)
         if (this.pending >= MAX_PENDING_HANDSHAKES) return reject(BUSY, 4429)
         this.pending++; counted = true
         hs = new HostHandshake(this.code, this.salt, this.iterations)
@@ -138,12 +144,18 @@ export class MeetingServer {
         if (!ok) { this.fail(ip); return reject('Código incorrecto') }
         const ch = (channel = ok.channel)
         send(ws, ok.ok)
+        const hello = hs.clientHello!
         id = this.meeting.join(hs.clientName, {
           send: (msg) => ws.readyState === WebSocket.OPEN && ws.send(ch.seal(JSON.stringify(msg))),
           close: () => ws.close(1000),
-          sendMedia: (stream, frame) => sendMediaOver(ws, ch, stream, mediaSeq++, frame, mediaWait)
-        })
-        if (!id) { ws.send(ch.seal(JSON.stringify({ t: 'closed', reason: 'La reunión está llena' }))); ws.close(1000); return }
+          sendMedia: (stream, frame) => sendMediaOver(ws, ch, stream, mediaSeq++, frame, mediaWait),
+          sendFile: (chunk) => ws.readyState === WebSocket.OPEN && ws.send(ch.sealBytes(chunk)),
+          backlog: () => ws.bufferedAmount
+        }, { device: hello.device, caps: hello.caps })
+        if (!id) {
+          const reason = this.meeting.locked ? LOCKED : 'La reunión está llena'
+          ws.send(ch.seal(JSON.stringify({ t: 'closed', reason }))); ws.close(1000); return
+        }
         stage = 'open'; return
       }
       ws.close(4401, 'unexpected message')
@@ -165,7 +177,7 @@ export function probeInfo(host: string, port: number, timeoutMs = 1500): Promise
   })
 }
 
-/** Events: 'message'(ServerMessage), 'media'(stream, frame), 'closed'(reason). */
+/** Events: 'message'(ServerMessage), 'media'(stream, frame), 'file'(FileChunk), 'closed'(reason). */
 export class MeetingClient extends EventEmitter {
   private ws?: WebSocket
   private channel?: SecureChannel
@@ -173,6 +185,9 @@ export class MeetingClient extends EventEmitter {
   private media = new MediaAssembler()
   private mediaSeq = 0
   private mediaWait = new Set<number>()
+
+  /** What this endpoint declares in its hello. */
+  constructor(private device: Device = 'pc', private caps: Cap[] = PC_CAPS) { super() }
 
   /**
    * Resolves once the host has proven it knows the code too. Rejects with a user-facing message.
@@ -191,7 +206,7 @@ export class MeetingClient extends EventEmitter {
   private connectOnce(host: string, port: number, code: string, name: string, iterations: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const ws = (this.ws = new WebSocket(`ws://${host}:${port}`, { maxPayload: MAX_MESSAGE_BYTES, handshakeTimeout: HANDSHAKE_TIMEOUT_MS }))
-      const hs = new ClientHandshake(code, name, iterations)
+      const hs = new ClientHandshake(code, name, iterations, this.device, this.caps)
       let ready = false
       const fail = (msg: string) => { if (!ready) { ready = true; reject(new Error(msg)) } ws.terminate() }
       const timer = setTimeout(() => fail('El anfitrión no respondió'), HANDSHAKE_TIMEOUT_MS)
@@ -206,6 +221,12 @@ export class MeetingClient extends EventEmitter {
             try { f = this.media.push(plain) } catch { this.finish('Mensaje inválido del anfitrión'); ws.terminate(); return }
             // The host only sends what this PC watches: the presentation and the screen of the PC it controls.
             if (f && (f.stream === MEDIA_STREAM.presentation || f.stream === MEDIA_STREAM.control)) this.emit('media', f.stream, f.frame)
+            return
+          }
+          if (plain && plain[0] === FILE_TAG) {
+            const c: FileChunk | null = parseFileChunk(plain)
+            if (!c) { this.finish('Mensaje inválido del anfitrión'); ws.terminate(); return }
+            this.emit('file', c)
             return
           }
           const m = plain === null ? null : parseServer(plain)
@@ -250,6 +271,14 @@ export class MeetingClient extends EventEmitter {
     if (!this.channel || !this.ws) return false
     return sendMediaOver(this.ws, this.channel, stream, this.mediaSeq++, frame, this.mediaWait)
   }
+  /** One FILE_TAG chunk of an upload (see encodeFileChunk). Callers pace themselves with `backlog`. */
+  sendFileChunk(chunk: Uint8Array): boolean {
+    if (!this.channel || this.ws?.readyState !== WebSocket.OPEN) return false
+    this.ws.send(this.channel.sealBytes(chunk))
+    return true
+  }
+  /** Bytes waiting in the socket. */
+  get backlog() { return this.ws?.bufferedAmount ?? 0 }
   close() { try { this.send({ t: 'leave' }) } catch { /* already closed */ } this.ws?.close(); this.finish('Saliste de la reunión') }
   private finish(reason: string) { if (!this.closedOnce) { this.closedOnce = true; this.emit('closed', reason) } }
 }

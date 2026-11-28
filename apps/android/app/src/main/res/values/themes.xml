@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo oscuro de arranque: el mismo de la entrada «Doble Erre», asi no hay destello blanco. -->
+    <style name="Theme.MirrorStudio" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash</item>
+    </style>
+</resources>

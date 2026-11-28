@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Entrada de MirrorStudio</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ms.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+</helmet>
+<div class="screen" style="width:412px;height:892px;background:#FFFFFF">
+  <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(11,16,32,.07) 1px,transparent 1px);background-size:22px 22px"></div>
+  <a href="02-Inicio.dc.html" class="body" style="align-items:center;justify-content:center;gap:0;color:inherit;text-decoration:none;position:relative" aria-label="Entrar a MirrorStudio">
+    <div style="position:relative;width:330px;display:flex;flex-direction:column;align-items:center;padding:60px 0 20px">
+      <span class="cloud a"></span>
+      <span class="cloud b"></span>
+      <span class="echo" style="width:150px;height:150px;margin-left:-75px;top:67px;animation-delay:.55s"></span>
+      <span class="echo" style="width:150px;height:150px;margin-left:-75px;top:67px;animation-delay:.85s"></span>
+      <svg width="144" height="105" viewBox="0 0 372 271" role="img" aria-label="MirrorStudio, doble erre" style="overflow:visible;position:relative">
+        <defs>
+          <clipPath id="sym"><path d="M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z"/><path d="M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z"/></clipPath>
+          <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        </defs>
+        <g fill="#0B1020">
+          <path style="animation:introR1 .265s var(--ease) both" d="M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z"/>
+          <path style="animation:introR2 .29s var(--ease) .105s both" d="M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z"/>
+        </g>
+        <g clip-path="url(#sym)"><rect x="-140" y="-10" width="110" height="290" fill="url(#shine)" style="animation:sweep .9s ease-in-out .95s both"/></g>
+      </svg>
+      <svg class="reflect" width="144" height="105" viewBox="0 0 372 271" aria-hidden="true" style="margin-top:6px;position:relative"><g fill="#0B1020"><path d="M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z"/><path d="M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z"/></g></svg>
+      <div style="position:relative;margin-top:-62px;font:800 28px/34px var(--display);letter-spacing:-.01em;animation:introName .24s ease .29s both">MirrorStudio</div>
+    </div>
+    <p class="caption muted" style="position:relative;animation:introName .3s ease 1.6s both">Toca para entrar</p>
+  </a>
+  <a href="Main.dc.html" class="btn btn-ghost btn-sm" style="position:absolute;top:28px;right:16px;height:36px;font-size:13px"><svg class="ic ic16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/></svg>Repetir</a>
+  <div style="position:absolute;left:0;right:0;bottom:44px;display:flex;flex-direction:column;align-items:center;gap:10px">
+    <div style="width:64px;height:64px;border-radius:20px;background:#FFFFFF;border:1px solid var(--line);display:grid;place-items:center;box-shadow:0 4px 14px rgba(11,16,32,.12)">
+      <svg width="40" height="29" viewBox="0 0 372 271" aria-hidden="true"><g fill="#000000"><path d="M0 221V54H54C83 20 120 0 158 0C193 0 222 20 222 51C222 82 204 101 177 101C156 101 139 88 136 69C110 66 88 86 80 111C76 125 76 143 76 163V221Z"/><path d="M146 271V117H200C229 82 268 58 308 58C345 58 372 78 372 110C372 140 353 159 327 159C305 159 288 145 285 127C259 124 235 145 226 174C222 187 222 203 222 220V271Z"/></g></svg>
+    </div>
+    <p class="caption muted tc" style="width:260px">Icono del lanzador: siempre fondo blanco y doble erre negra, aunque el teléfono esté en modo oscuro.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":412,"height":892}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
