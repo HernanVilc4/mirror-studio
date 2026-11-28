@@ -2,7 +2,12 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { ControlHealth, ControlInput } from '@mirror-studio/protocol'
+import type { ControlHealth, ControlInput, SlideAction } from '@mirror-studio/protocol'
+
+/** Tecla de PowerPoint, Google Slides o Canva para cada orden del telefono vinculado (DECISIONES.md, seccion 4). */
+export const SLIDE_KEYS: Record<SlideAction, string> = {
+  next: 'ArrowRight', prev: 'ArrowLeft', first: 'Home', last: 'End', black: 'KeyB', white: 'KeyW', start: 'F5', end: 'Escape'
+}
 
 /** What the injector can tell about itself: see ControlHealth in the protocol for the codes. */
 export type InjectorHealth = Omit<ControlHealth, 'received'>
@@ -53,6 +58,19 @@ export class RemoteInput {
   private count = 0
 
   constructor(private driver: InputDriver) {}
+
+  /**
+   * Una orden de diapositivas del telefono vinculado a esta PC. No usa begin(): no hay concesion de control ni
+   * barra roja, es un permiso mucho mas pequeno (no mueve el raton ni escribe texto). El anfitrion ya garantizo
+   * que solo llega del telefono vinculado.
+   */
+  slide(action: SlideAction): void {
+    if (!this.driver.supported) return
+    const k = KEYMAP[SLIDE_KEYS[action]]
+    if (!k) return
+    this.driver.key(k[0], k[1], true)
+    this.driver.key(k[0], k[1], false)
+  }
 
   /** Input events received from the current controller. Reported back, so the controller can tell when its input stops arriving. */
   get received() { return this.count }

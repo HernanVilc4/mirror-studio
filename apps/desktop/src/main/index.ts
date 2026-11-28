@@ -4,6 +4,7 @@ import { hostname } from 'node:os'
 import { ClientMessage, DEFAULT_PORT, isValidCode, normalizeCode } from '@mirror-studio/protocol'
 import { AppSession, type UiEvent } from './app-session'
 import { createDriver } from './input'
+import { Overlay } from './overlay'
 import { firewallCommand, listInterfaces, pickInterface, scanLan } from './network'
 import { diagnoseFirewall, ensureFirewall, repairFirewall, type FirewallState } from './firewall'
 import { isThemeSource, loadTheme, paintWindow, setTheme, themeInfo, WINDOW_COLORS } from './theme'
@@ -37,7 +38,14 @@ let win: BrowserWindow | null = null
 // A closed window is destroyed, not null: touching its webContents throws "Object has been destroyed" (an error
 // box on quit, because closing the app ends the meeting and that sends one last 'closed' event).
 const alive = (w: BrowserWindow | null): w is BrowserWindow => !!w && !w.isDestroyed()
-const emit = (e: UiEvent) => { if (alive(win)) win.webContents.send('ui', e); if (e.t === 'notice' && alive(banner)) banner.webContents.send('ui', e) }
+/** Puntero laser y trazos del telefono vinculado, dibujados encima de lo que esta PC presenta. */
+const overlay = new Overlay()
+const emit = (e: UiEvent) => {
+  if (alive(win)) win.webContents.send('ui', e)
+  if (e.t === 'notice' && alive(banner)) banner.webContents.send('ui', e)
+  if (e.t === 'message') overlay.onMessage(e.m, meeting.id)
+  if (e.t === 'closed') overlay.close()
+}
 
 /** Emergency stop for the person being controlled. Works even when the app window is not focused. */
 const PANIC_KEY = 'CommandOrControl+Alt+Escape'

@@ -5,11 +5,13 @@ Fecha: 27 de noviembre de 2026.
 **Estado:**
 - **Protocolo v5 y anfitrión: implementados**, con tests. Están en `packages/protocol` (con los vectores en `packages/protocol/vectors/`) y en `apps/desktop/src/main/meeting.ts` y `meeting-net.ts`. Las decisiones tomadas donde este documento era ambiguo están en `packages/protocol/vectors/README.md` y en los comentarios de `meeting.ts`.
 - **App Android: implementada contra v5.** Pasa los mismos vectores (`apps/android/core/protocol/.../VectorsTest.kt`).
+- **Escritorio, ya hecho:** las teclas de diapositivas del teléfono vinculado (`input.ts`, `app-session.ts`) y la capa del láser y los trazos (`overlay.ts`). La capa cubre la pantalla principal; con una ventana presentada no coincide.
 - **Falta en el escritorio** (filas de la sección 11 que tocan la ventana):
-  - los paneles D1–D5;
-  - la capa de láser y trazos;
-  - las teclas de diapositivas y `F <hwnd>` en `input.ts`;
+  - los paneles D1–D5 (chat, lista con manos, encuestas, QR para vincular y para unirse);
+  - el comando `F <hwnd>` para traer al frente la ventana presentada;
+  - que la capa siga a una ventana presentada y no solo a la pantalla;
   - el evento `'file'` de `MeetingClient` en `AppSession`.
+- **Aviso:** PowerPoint abre la presentación en otra ventana. Si se comparte solo la ventana del editor, la sala sigue viendo el editor; hay que presentar la pantalla completa.
 
 Prototipo (Figma, modo claro): <https://www.figma.com/design/HQc3x1A6un1ZJQvJjybmo4>
 - Sección «Pantallas»: flujo base del teléfono (01–14).

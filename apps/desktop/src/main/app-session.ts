@@ -135,6 +135,8 @@ export class AppSession {
       case 'control-ended': if (m.target === this.me) this.stopControlled(); break
       // Applied here; the window has no use for dozens of mouse moves a second.
       case 'control-input': this.input.apply(m.from, m.input); return
+      // Del telefono vinculado a esta PC (el anfitrion no la reenvia a nadie mas): pasa la diapositiva.
+      case 'slide': this.input.slide(m.action); return
       case 'control-reset':
         // The controller saw its input or the picture stop: fresh injector now (the window re-captures the screen).
         if (m.from === this.input.controlledBy) { this.input.reset(); void this.reportHealth(m.from) }
