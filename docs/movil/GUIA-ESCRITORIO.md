@@ -4,13 +4,13 @@ Para quien programe el escritorio (una persona o su Claude). La app Android y el
 
 ## Prompt para pegar en Claude
 
-> Lee, en este orden: `docs/movil/GUIA-ESCRITORIO.md` (esta guía), `docs/movil/DECISIONES.md` y `packages/protocol/vectors/README.md`. Trabaja en una rama nueva a partir de `feat/app-movil-protocolo-v5`. Haz las tareas de la sección 3 en el orden indicado. En cada una: escribe la interfaz copiando el estilo de la app actual y los mockups de `docs/movil/prototipo/`, añade tests de lo que se pueda probar sin ventana, y comprueba que `npm test` y `npm run typecheck` pasan. No ejecutes nada que mueva el ratón o el teclado reales (pruebas de ráfaga, `control-soak`) sin pedir permiso. No cambies el protocolo ni las reglas del anfitrión sin avisar: la app Android depende de ellos. Al terminar cada tarea, di qué hiciste y qué comprobaste.
+> Lee, en este orden: `docs/movil/GUIA-ESCRITORIO.md` (esta guía), `docs/movil/DECISIONES.md` y `packages/protocol/vectors/README.md`. Trabaja en una rama nueva a partir de `calebe`. Haz las tareas de la sección 3 en el orden indicado. En cada una: escribe la interfaz copiando el estilo de la app actual y los mockups de `docs/movil/prototipo/`, añade tests de lo que se pueda probar sin ventana, y comprueba que `npm test` y `npm run typecheck` pasan. No ejecutes nada que mueva el ratón o el teclado reales (pruebas de ráfaga, `control-soak`) sin pedir permiso. No cambies el protocolo ni las reglas del anfitrión sin avisar: la app Android depende de ellos. Al terminar cada tarea, di qué hiciste y qué comprobaste.
 
 ## 1. Dónde está cada cosa
 
 | Qué | Dónde |
 |---|---|
-| Rama con todo lo hecho | `feat/app-movil-protocolo-v5` (partir de aquí; o de `main` cuando se fusione) |
+| Rama con todo lo hecho | `calebe` (partir de aquí; o de `main` cuando se fusione) |
 | Decisiones, permisos y mensajes (qué es cada cosa y por qué) | `docs/movil/DECISIONES.md` |
 | Mensajes v5 y sus reglas | `packages/protocol/src/index.ts` |
 | Vectores de prueba (válidos e inválidos de cada mensaje, y un saludo con claves fijas) | `packages/protocol/vectors/` (`README.md` explica el formato) |
