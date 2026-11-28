@@ -1,0 +1,291 @@
+{
+  "protocolVersion": 5,
+  "area": "polls",
+  "valid": [
+    {
+      "name": "poll-create",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "live"
+      }
+    },
+    {
+      "name": "poll-create 6 options, multi, anonymous, on-close",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "multi": true,
+        "anonymous": true,
+        "showResults": "on-close"
+      }
+    },
+    {
+      "name": "poll-vote",
+      "dir": "client",
+      "message": {
+        "t": "poll-vote",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "choices": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "poll-vote multi",
+      "dir": "client",
+      "message": {
+        "t": "poll-vote",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "choices": [
+          0,
+          5
+        ]
+      }
+    },
+    {
+      "name": "poll-close",
+      "dir": "client",
+      "message": {
+        "t": "poll-close",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0"
+      }
+    },
+    {
+      "name": "poll-state for a voter (results on close)",
+      "dir": "server",
+      "message": {
+        "t": "poll-state",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "on-close",
+        "closed": false,
+        "total": 2
+      }
+    },
+    {
+      "name": "poll-state for the creator",
+      "dir": "server",
+      "message": {
+        "t": "poll-state",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "on-close",
+        "closed": false,
+        "total": 2,
+        "counts": [
+          1,
+          1
+        ],
+        "voters": [
+          {
+            "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+            "choices": [
+              0
+            ]
+          },
+          {
+            "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+            "choices": [
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "poll-state closed",
+      "dir": "server",
+      "message": {
+        "t": "poll-state",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "on-close",
+        "closed": true,
+        "total": 2,
+        "counts": [
+          1,
+          1
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "poll-create one option",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "solo"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "live"
+      },
+      "why": "options min 2"
+    },
+    {
+      "name": "poll-create seven options",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "live"
+      },
+      "why": "options max 6"
+    },
+    {
+      "name": "poll-create option too long",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "a",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "live"
+      },
+      "why": "option max 100"
+    },
+    {
+      "name": "poll-create question too long",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "live"
+      },
+      "why": "question max 300"
+    },
+    {
+      "name": "poll-create bad showResults",
+      "dir": "client",
+      "message": {
+        "t": "poll-create",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "never"
+      },
+      "why": "showResults is 'live' or 'on-close'"
+    },
+    {
+      "name": "poll-vote no choices",
+      "dir": "client",
+      "message": {
+        "t": "poll-vote",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "choices": []
+      },
+      "why": "choices min 1"
+    },
+    {
+      "name": "poll-vote choice 6",
+      "dir": "client",
+      "message": {
+        "t": "poll-vote",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "choices": [
+          6
+        ]
+      },
+      "why": "choice in 0..5"
+    },
+    {
+      "name": "poll-vote seven choices",
+      "dir": "client",
+      "message": {
+        "t": "poll-vote",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "choices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          0
+        ]
+      },
+      "why": "choices max 6"
+    },
+    {
+      "name": "poll-state without total",
+      "dir": "server",
+      "message": {
+        "t": "poll-state",
+        "pollId": "9e8d7c6b-5a49-4382-a716-05f4e3d2c1b0",
+        "question": "¿Qué tema repasamos?",
+        "options": [
+          "Límites",
+          "Derivadas"
+        ],
+        "multi": false,
+        "anonymous": false,
+        "showResults": "on-close",
+        "closed": false
+      },
+      "why": "total is required"
+    }
+  ]
+}

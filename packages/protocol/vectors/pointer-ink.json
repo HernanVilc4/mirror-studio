@@ -1,0 +1,625 @@
+{
+  "protocolVersion": 5,
+  "area": "pointer-ink",
+  "valid": [
+    {
+      "name": "pointer",
+      "dir": "client",
+      "message": {
+        "t": "pointer",
+        "x": 0.5,
+        "y": 0.5,
+        "on": true
+      }
+    },
+    {
+      "name": "pointer off",
+      "dir": "client",
+      "message": {
+        "t": "pointer",
+        "x": 0,
+        "y": 1,
+        "on": false
+      }
+    },
+    {
+      "name": "ink",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      }
+    },
+    {
+      "name": "ink highlighter, last piece, no points",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [],
+        "color": "yellow",
+        "width": 3,
+        "tool": "highlighter",
+        "done": true
+      }
+    },
+    {
+      "name": "ink 32 points",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      }
+    },
+    {
+      "name": "ink-undo",
+      "dir": "client",
+      "message": {
+        "t": "ink-undo"
+      }
+    },
+    {
+      "name": "ink-clear",
+      "dir": "client",
+      "message": {
+        "t": "ink-clear"
+      }
+    },
+    {
+      "name": "pointer to the presenter",
+      "dir": "server",
+      "message": {
+        "t": "pointer",
+        "from": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+        "x": 0.5,
+        "y": 0.5,
+        "on": true
+      }
+    },
+    {
+      "name": "ink to the presenter",
+      "dir": "server",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false,
+        "from": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+      }
+    },
+    {
+      "name": "ink-undo to the presenter",
+      "dir": "server",
+      "message": {
+        "t": "ink-undo",
+        "from": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+      }
+    },
+    {
+      "name": "ink-clear to the presenter",
+      "dir": "server",
+      "message": {
+        "t": "ink-clear",
+        "from": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "pointer out of range",
+      "dir": "client",
+      "message": {
+        "t": "pointer",
+        "x": -0.1,
+        "y": 0.5,
+        "on": true
+      },
+      "why": "x in 0..1"
+    },
+    {
+      "name": "pointer without on",
+      "dir": "client",
+      "message": {
+        "t": "pointer",
+        "x": 0.5,
+        "y": 0.5
+      },
+      "why": "on is required"
+    },
+    {
+      "name": "ink 33 points",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "points max 32"
+    },
+    {
+      "name": "ink point with 3 numbers",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "a point is [x, y]"
+    },
+    {
+      "name": "ink point out of range",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0,
+            2
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "y in 0..1"
+    },
+    {
+      "name": "ink width 4",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 4,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "width is 1, 2 or 3"
+    },
+    {
+      "name": "ink width as string",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": "2",
+        "tool": "pen",
+        "done": false
+      },
+      "why": "width is a number"
+    },
+    {
+      "name": "ink unknown color",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "green",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "color is red, blue, yellow or black"
+    },
+    {
+      "name": "ink unknown tool",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 7,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "eraser",
+        "done": false
+      },
+      "why": "tool is pen or highlighter"
+    },
+    {
+      "name": "ink negative stroke",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": -1,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "stroke >= 0"
+    },
+    {
+      "name": "ink fractional stroke",
+      "dir": "client",
+      "message": {
+        "t": "ink",
+        "stroke": 1.5,
+        "points": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.15,
+            0.25
+          ]
+        ],
+        "color": "red",
+        "width": 2,
+        "tool": "pen",
+        "done": false
+      },
+      "why": "stroke is an integer"
+    },
+    {
+      "name": "pointer from host without from",
+      "dir": "server",
+      "message": {
+        "t": "pointer",
+        "x": 0.5,
+        "y": 0.5,
+        "on": true
+      },
+      "why": "from is required host -> client"
+    }
+  ]
+}

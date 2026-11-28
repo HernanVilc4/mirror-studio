@@ -338,6 +338,9 @@ export class Hub {
   enableRelay(id: string, reason: RelayReason, tell: boolean) {
     const l = this.links.get(id)
     if (!l || l.relay || !relaySupported()) return
+    // Un telefono no tiene rele TCP (decision A5): su enlace sigue por WebRTC aunque el video parezca quieto
+    // (la captura de una pantalla que no cambia manda pocos cuadros y no es un fallo de red).
+    if (this.state?.participants.find((p) => p.id === id)?.device === 'phone') return
     l.relay = true
     if (tell) this.hooks.modeOut(id, reason)
     const n = () => Math.max(1, this.links.size)

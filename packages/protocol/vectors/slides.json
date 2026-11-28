@@ -1,0 +1,168 @@
+{
+  "protocolVersion": 5,
+  "area": "slides",
+  "valid": [
+    {
+      "name": "slide next",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "next"
+      }
+    },
+    {
+      "name": "slide prev",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "prev"
+      }
+    },
+    {
+      "name": "slide first",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "first"
+      }
+    },
+    {
+      "name": "slide last",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "last"
+      }
+    },
+    {
+      "name": "slide black",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "black"
+      }
+    },
+    {
+      "name": "slide white",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "white"
+      }
+    },
+    {
+      "name": "slide start",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "start"
+      }
+    },
+    {
+      "name": "slide end",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "end"
+      }
+    },
+    {
+      "name": "slide to the paired PC",
+      "dir": "server",
+      "message": {
+        "t": "slide",
+        "from": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+        "action": "next"
+      }
+    },
+    {
+      "name": "slide-state (phase 2)",
+      "dir": "client",
+      "message": {
+        "t": "slide-state",
+        "index": 3,
+        "total": 12,
+        "nextTitle": "Derivadas",
+        "notes": "Recordar el ejemplo"
+      }
+    },
+    {
+      "name": "slide-state minimal",
+      "dir": "client",
+      "message": {
+        "t": "slide-state",
+        "index": 1,
+        "total": 1
+      }
+    },
+    {
+      "name": "slide-state to the paired phone",
+      "dir": "server",
+      "message": {
+        "t": "slide-state",
+        "from": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "index": 3,
+        "total": 12,
+        "nextTitle": "Derivadas"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "slide-state index 0",
+      "dir": "client",
+      "message": {
+        "t": "slide-state",
+        "index": 0,
+        "total": 12
+      },
+      "why": "index is 1-based"
+    },
+    {
+      "name": "slide-state notes too long",
+      "dir": "client",
+      "message": {
+        "t": "slide-state",
+        "index": 1,
+        "total": 1,
+        "notes": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "why": "notes max 2000"
+    },
+    {
+      "name": "slide-state without total",
+      "dir": "client",
+      "message": {
+        "t": "slide-state",
+        "index": 1
+      },
+      "why": "total is required"
+    },
+    {
+      "name": "slide unknown action",
+      "dir": "client",
+      "message": {
+        "t": "slide",
+        "action": "jump"
+      },
+      "why": "unknown action"
+    },
+    {
+      "name": "slide without action",
+      "dir": "client",
+      "message": {
+        "t": "slide"
+      },
+      "why": "action is required"
+    },
+    {
+      "name": "slide from host without from",
+      "dir": "server",
+      "message": {
+        "t": "slide",
+        "action": "next"
+      },
+      "why": "from is required host -> client"
+    }
+  ]
+}

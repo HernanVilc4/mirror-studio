@@ -1,9 +1,13 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import WebSocket from 'ws'
 import { MeetingHost, type Conn } from './meeting'
-import { MeetingServer, MeetingClient, probeInfo, MAX_FAILURES } from './meeting-net'
+import { createHash } from 'node:crypto'
+import { MeetingServer, MeetingClient, probeInfo, MAX_FAILURES, LOCKED } from './meeting-net'
 import { generateCode } from '@mirror-studio/protocol/src/node'
-import { PROTOCOL_VERSION, type ServerMessage } from '@mirror-studio/protocol'
+import {
+  FILE_CHUNK, PC_CAPS, PHONE_CAPS, PROTOCOL_VERSION, encodeFileChunk, fileChunkCount,
+  type Cap, type Device, type FileChunk, type ServerMessage
+} from '@mirror-studio/protocol'
 
 const IT = 1000
 const cleanups: (() => void)[] = []
@@ -22,17 +26,19 @@ async function host() {
   const hostId = meeting.join('Ana', local)!
   const srv = new MeetingServer(meeting, code, 'PC-LAB-1', IT)
   const port = await srv.start(0, '127.0.0.1')
-  cleanups.push(() => srv.stop())
+  cleanups.push(() => { srv.stop(); meeting.close('fin') })
   return { code, meeting, local, hostId, srv, port }
 }
-async function join(port: number, code: string, name: string) {
-  const c = new MeetingClient()
+async function join(port: number, code: string, name: string, device: Device = 'pc', caps: Cap[] = PC_CAPS) {
+  const c = new MeetingClient(device, caps)
   const msgs: ServerMessage[] = []
+  const files: FileChunk[] = []
   c.on('message', (m) => msgs.push(m))
+  c.on('file', (f: FileChunk) => files.push(f))
   await c.connect('127.0.0.1', port, code, name, IT)
   cleanups.push(() => c.close())
   const until = async (pred: () => boolean) => { for (let i = 0; i < 100 && !pred(); i++) await new Promise((r) => setTimeout(r, 10)); return pred() }
-  return { c, msgs, until, of: <T extends ServerMessage['t']>(t: T) => msgs.filter((m) => m.t === t) as Extract<ServerMessage, { t: T }>[] }
+  return { c, msgs, files, until, of: <T extends ServerMessage['t']>(t: T) => msgs.filter((m) => m.t === t) as Extract<ServerMessage, { t: T }>[] }
 }
 
 describe('joining over the network', () => {
@@ -168,5 +174,57 @@ describe('meeting lifecycle over the network', () => {
     bob.c.send({ t: 'set-role', target: bobId, role: 'admin' })
     await bob.until(() => bob.of('notice').length === 1)
     expect(h.meeting.state().participants.find((p) => p.id === bobId)!.role).toBe('participant')
+  })
+})
+
+describe('protocol v5 over the network', () => {
+  it('the hello carries device and caps to the host', async () => {
+    const h = await host()
+    const phone = await join(h.port, h.code, 'Galaxy', 'phone', PHONE_CAPS)
+    await phone.until(() => phone.of('welcome').length === 1)
+    const me = phone.of('welcome')[0]
+    expect(me.state.participants.find((p) => p.id === me.you)).toMatchObject({ device: 'phone', hand: null, pairedWith: null })
+    h.meeting.sendMediaMode(me.you, 'failed') // a phone has no relay
+    await new Promise((r) => setTimeout(r, 50))
+    expect(phone.of('media-mode')).toHaveLength(0)
+  })
+
+  it('a locked room turns newcomers away with "La sala está bloqueada"; those inside stay', async () => {
+    const h = await host()
+    const bob = await join(h.port, h.code, 'Bob')
+    await bob.until(() => bob.of('welcome').length === 1)
+    h.meeting.handle(h.hostId, { t: 'room-settings', chat: 'all', share: 'all', locked: true })
+    await expect(join(h.port, h.code, 'Tarde')).rejects.toThrow(LOCKED)
+    expect(h.meeting.size).toBe(2)
+  })
+
+  it('uploads and downloads a file as FILE_TAG frames through the encrypted socket', async () => {
+    const h = await host()
+    const bob = await join(h.port, h.code, 'Bob'), eve = await join(h.port, h.code, 'Eve')
+    await bob.until(() => bob.of('welcome').length === 1)
+    await eve.until(() => eve.of('welcome').length === 1)
+    const body = Buffer.from(Array.from({ length: FILE_CHUNK * 2 + 500 }, (_, i) => i & 0xff))
+    const sha256 = createHash('sha256').update(body).digest('hex')
+    bob.c.send({ t: 'file-offer', name: 'apuntes.pdf', size: body.length, sha256, mime: 'application/pdf' })
+    expect(await bob.until(() => bob.of('file-accept').length === 1)).toBe(true)
+    const fileId = bob.of('file-accept')[0].fileId
+    const count = fileChunkCount(body.length)
+    for (let i = 0; i < count; i++) bob.c.sendFileChunk(encodeFileChunk(fileId, i, count, body.subarray(i * FILE_CHUNK, (i + 1) * FILE_CHUNK)))
+    bob.c.send({ t: 'msg-send', to: 'all', body: { kind: 'file', fileId } })
+    expect(await eve.until(() => eve.of('msg').length === 1)).toBe(true)
+    eve.c.send({ t: 'file-get', fileId })
+    expect(await eve.until(() => eve.files.length === count)).toBe(true)
+    expect(eve.of('file-meta')[0]).toEqual({ t: 'file-meta', fileId, name: 'apuntes.pdf', size: body.length, sha256 })
+    const got = Buffer.concat(eve.files.map((f) => f.payload))
+    expect(createHash('sha256').update(got).digest('hex')).toBe(sha256)
+  })
+
+  it('drops a peer that sends a malformed file frame', async () => {
+    const h = await host()
+    const bob = await join(h.port, h.code, 'Bob')
+    await bob.until(() => bob.of('welcome').length === 1)
+    bob.c.sendFileChunk(new Uint8Array([2, 0, 0]))
+    await new Promise((r) => setTimeout(r, 100))
+    expect(h.meeting.size).toBe(1)
   })
 })

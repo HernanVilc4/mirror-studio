@@ -1,0 +1,21 @@
+{
+  "protocolVersion": 5,
+  "area": "media",
+  "valid": [],
+  "invalid": [],
+  "frames": {
+    "$doc": "MEDIA_TAG piece: [0x01 u8][stream u8][seq u32 BE][index u16 BE][count u16 BE][payload <= 49152]. Streams: 1 presentation, 2 control, 3 screen.",
+    "valid": [
+      {
+        "name": "one-piece frame",
+        "stream": 1,
+        "seq": 9,
+        "frameHex": "0001020304",
+        "pieces": [
+          "010100000009000000010001020304"
+        ]
+      }
+    ],
+    "invalid": []
+  }
+}

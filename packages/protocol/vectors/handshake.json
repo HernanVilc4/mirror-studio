@@ -1,0 +1,87 @@
+{
+  "$doc": [
+    "Authenticated handshake (packages/protocol/src/node.ts) with fixed inputs. Byte strings are hex unless the field ends in B64 or is a wire message.",
+    "codeKey = PBKDF2-HMAC-SHA256(normalize(code), base64decode(salt), iterations, 32). normalize = uppercase, keep [A-Z0-9].",
+    "dh = X25519(clientPrivate, hostPublic). transcript = SHA-256(\"MS2\" || utf8(transcriptInput)), transcriptInput = JSON.stringify([hello.pub, reply.pub, hello.nonce, reply.nonce, salt, hello.name]).",
+    "okm = HKDF-SHA256(ikm = dh || codeKey, salt = transcript, info = \"ms2-keys\", 96 bytes): c2h = okm[0..32], h2c = okm[32..64], confirm = okm[64..96].",
+    "clientMac = hex(HMAC-SHA256(confirm, \"client\" || transcript)) sent in confirm.mac; hostMac the same with \"host\", in confirm-ok.mac.",
+    "Sealed frame: [counter u64 BE][AES-256-GCM ciphertext][16-byte tag], GCM nonce = 4 zero bytes || counter u64 BE. Client seals with c2h, host with h2c. Counters start at 0 per direction.",
+    "The hello device/caps are not part of the transcript."
+  ],
+  "protocolVersion": 5,
+  "inputs": {
+    "code": "K7M2-QX9P",
+    "codeNormalized": "K7M2QX9P",
+    "iterations": 200000,
+    "saltB64": "EBESExQVFhcYGRobHB0eHw==",
+    "name": "Galaxy de Ana",
+    "device": "phone",
+    "caps": [
+      "camera",
+      "files"
+    ],
+    "clientPrivateKey": "c83ceec97140092fef54db66ea6cdffd2ffe070f9d98ffe99a9276f8c3edd076",
+    "clientNonceB64": "AAECAwQFBgcICQoLDA0ODw==",
+    "hostPrivateKey": "06ca821b0b375b5b2e56c518b1a970dc24422638e5d9217c4eaef9a4f791e1e4",
+    "hostNonceB64": "IDAhMSIyIzMkNCU1JjYnNw=="
+  },
+  "messages": {
+    "hello": {
+      "t": "hello",
+      "v": 5,
+      "pub": "05jo6e/nGRbv9x/qZ30i/Cc8L3FAQ5xGmel6zcWTSis=",
+      "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+      "name": "Galaxy de Ana",
+      "device": "phone",
+      "caps": [
+        "camera",
+        "files"
+      ]
+    },
+    "helloReply": {
+      "t": "hello-reply",
+      "pub": "kffx2J7N4Xe3uW89Hr7MGx73LYRV25xqXsonTOXGZCo=",
+      "nonce": "IDAhMSIyIzMkNCU1JjYnNw==",
+      "salt": "EBESExQVFhcYGRobHB0eHw=="
+    },
+    "confirm": {
+      "t": "confirm",
+      "mac": "90355a3602312ad9a99d09232235fb3e097371b560b3de735b1a528145433e7f"
+    },
+    "confirmOk": {
+      "t": "confirm-ok",
+      "mac": "a7376f71e89654300d7950a0fee88946c6dcdeca57e17508a16bc321d95ed0d1"
+    }
+  },
+  "derived": {
+    "clientPublicKey": "d398e8e9efe71916eff71fea677d22fc273c2f7140439c4699e97acdc5934a2b",
+    "hostPublicKey": "91f7f1d89ecde177b7b96f3d1ebecc1b1ef72d8455db9c6a5eca274ce5c6642a",
+    "codeKey": "0a56666f035bde8255a823e875a058dbb9bd7ea9d4bfcee429a856e22f197330",
+    "dh": "3a21cf0a4122ce22b25adad0d1f981bafaa5672a73ca51f325e631d240406371",
+    "transcriptInput": "[\"05jo6e/nGRbv9x/qZ30i/Cc8L3FAQ5xGmel6zcWTSis=\",\"kffx2J7N4Xe3uW89Hr7MGx73LYRV25xqXsonTOXGZCo=\",\"AAECAwQFBgcICQoLDA0ODw==\",\"IDAhMSIyIzMkNCU1JjYnNw==\",\"EBESExQVFhcYGRobHB0eHw==\",\"Galaxy de Ana\"]",
+    "transcript": "524796158b2a0fb4d6232eee46582c295f2376fb4598bee4b3f2c58b06350802",
+    "c2hKey": "ac0afc0163e9747e84697d91a2a57910eaa45353834ca96739ea56415c3cb4c7",
+    "h2cKey": "312e437539307392a6960ac98d942ab66845a6b1c47f31550810d727777c4bb3",
+    "confirmKey": "b789b8bb76f2cf5ce52173ca9614e1247cc631cac3f8cb3e0c11bb659288358b",
+    "clientMac": "90355a3602312ad9a99d09232235fb3e097371b560b3de735b1a528145433e7f",
+    "hostMac": "a7376f71e89654300d7950a0fee88946c6dcdeca57e17508a16bc321d95ed0d1"
+  },
+  "sealed": [
+    {
+      "direction": "client->host",
+      "counter": 0,
+      "keyHex": "ac0afc0163e9747e84697d91a2a57910eaa45353834ca96739ea56415c3cb4c7",
+      "nonceHex": "000000000000000000000000",
+      "plaintext": "{\"t\":\"present-start\",\"source\":\"camera\"}",
+      "frameHex": "00000000000000002a9ed331286d787b5fa08368714bb654feab36dcce7983db6bcdc88d980d0ef5cd7addecd841beb2aef91d65167151bae90ae71efa09d4"
+    },
+    {
+      "direction": "host->client",
+      "counter": 0,
+      "keyHex": "312e437539307392a6960ac98d942ab66845a6b1c47f31550810d727777c4bb3",
+      "nonceHex": "000000000000000000000000",
+      "plaintext": "{\"t\":\"notice\",\"text\":\"Ahora eres docente\"}",
+      "frameHex": "00000000000000005d210ee1bd9b90e64dbede4e5bff4735b3d056fbca74a4acd38a98f8b9f846e0e8a1830480258a69f88590ee2774c750296d25cf398a7d934cf0"
+    }
+  ]
+}

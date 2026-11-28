@@ -1,0 +1,245 @@
+{
+  "protocolVersion": 5,
+  "area": "control",
+  "valid": [
+    {
+      "name": "control-request",
+      "dir": "client",
+      "message": {
+        "t": "control-request",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6"
+      }
+    },
+    {
+      "name": "control-respond",
+      "dir": "client",
+      "message": {
+        "t": "control-respond",
+        "controller": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "accept": true
+      }
+    },
+    {
+      "name": "control-revoke",
+      "dir": "client",
+      "message": {
+        "t": "control-revoke",
+        "other": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "control-input mouse-move",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "mouse-move",
+          "x": 0.25,
+          "y": 1
+        }
+      }
+    },
+    {
+      "name": "control-input mouse-button",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "mouse-button",
+          "button": "left",
+          "down": true
+        }
+      }
+    },
+    {
+      "name": "control-input wheel",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "wheel",
+          "dx": 0,
+          "dy": -120
+        }
+      }
+    },
+    {
+      "name": "control-input key",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "key",
+          "code": "KeyA",
+          "down": false
+        }
+      }
+    },
+    {
+      "name": "control-input text",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "text",
+          "text": "ñ"
+        }
+      }
+    },
+    {
+      "name": "control-status",
+      "dir": "client",
+      "message": {
+        "t": "control-status",
+        "other": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "health": {
+          "code": "blocked-admin",
+          "detail": "Taskmgr",
+          "received": 3
+        }
+      }
+    },
+    {
+      "name": "control-reset",
+      "dir": "client",
+      "message": {
+        "t": "control-reset",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6"
+      }
+    },
+    {
+      "name": "control-asked",
+      "dir": "server",
+      "message": {
+        "t": "control-asked",
+        "controller": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "name": "Docente"
+      }
+    },
+    {
+      "name": "control-started",
+      "dir": "server",
+      "message": {
+        "t": "control-started",
+        "controller": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6"
+      }
+    },
+    {
+      "name": "control-ended",
+      "dir": "server",
+      "message": {
+        "t": "control-ended",
+        "controller": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "reason": "Rechazado"
+      }
+    },
+    {
+      "name": "control-input to target",
+      "dir": "server",
+      "message": {
+        "t": "control-input",
+        "from": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "input": {
+          "t": "mouse-move",
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "control-status to controller",
+      "dir": "server",
+      "message": {
+        "t": "control-status",
+        "from": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "health": {
+          "code": "blocked-admin",
+          "detail": "Taskmgr",
+          "received": 3
+        }
+      }
+    },
+    {
+      "name": "control-reset to target",
+      "dir": "server",
+      "message": {
+        "t": "control-reset",
+        "from": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "mouse-move out of range",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "mouse-move",
+          "x": 1.5,
+          "y": 0
+        }
+      },
+      "why": "x in 0..1"
+    },
+    {
+      "name": "wheel too big",
+      "dir": "client",
+      "message": {
+        "t": "control-input",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "input": {
+          "t": "wheel",
+          "dx": 0,
+          "dy": 99999
+        }
+      },
+      "why": "dy in -2000..2000"
+    },
+    {
+      "name": "unknown health code",
+      "dir": "client",
+      "message": {
+        "t": "control-status",
+        "other": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "health": {
+          "code": "pwned",
+          "detail": "Taskmgr",
+          "received": 3
+        }
+      },
+      "why": "unknown code"
+    },
+    {
+      "name": "negative received",
+      "dir": "client",
+      "message": {
+        "t": "control-status",
+        "other": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+        "health": {
+          "code": "blocked-admin",
+          "detail": "Taskmgr",
+          "received": -1
+        }
+      },
+      "why": "received >= 0"
+    },
+    {
+      "name": "control-respond without accept",
+      "dir": "client",
+      "message": {
+        "t": "control-respond",
+        "controller": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+      },
+      "why": "accept is required"
+    }
+  ]
+}

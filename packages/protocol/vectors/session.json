@@ -1,0 +1,815 @@
+{
+  "protocolVersion": 5,
+  "area": "session",
+  "valid": [
+    {
+      "name": "info",
+      "dir": "handshake",
+      "message": {
+        "t": "info"
+      }
+    },
+    {
+      "name": "info-reply (any version parses)",
+      "dir": "handshake",
+      "message": {
+        "t": "info-reply",
+        "v": 4,
+        "name": "Matemática II",
+        "host": "PC-DOCENTE",
+        "participants": 12
+      }
+    },
+    {
+      "name": "hello from a PC",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "pc",
+        "caps": [
+          "relay",
+          "overlay",
+          "files"
+        ]
+      }
+    },
+    {
+      "name": "hello from a phone",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "phone",
+        "caps": [
+          "camera",
+          "files"
+        ]
+      }
+    },
+    {
+      "name": "hello with no caps",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "phone",
+        "caps": []
+      }
+    },
+    {
+      "name": "hello-reply",
+      "dir": "handshake",
+      "message": {
+        "t": "hello-reply",
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "salt": "EBESExQVFhcYGRobHB0eHw=="
+      }
+    },
+    {
+      "name": "confirm",
+      "dir": "handshake",
+      "message": {
+        "t": "confirm",
+        "mac": "abababababababababababababababababababababababababababababababab"
+      }
+    },
+    {
+      "name": "confirm-ok",
+      "dir": "handshake",
+      "message": {
+        "t": "confirm-ok",
+        "mac": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      }
+    },
+    {
+      "name": "reject: locked room",
+      "dir": "handshake",
+      "message": {
+        "t": "reject",
+        "reason": "La sala está bloqueada"
+      }
+    },
+    {
+      "name": "welcome",
+      "dir": "server",
+      "message": {
+        "t": "welcome",
+        "you": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      }
+    },
+    {
+      "name": "state, nobody presenting",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": null,
+          "presenterSource": null,
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      }
+    },
+    {
+      "name": "state, phone camera",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+          "presenterSource": "camera",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      }
+    },
+    {
+      "name": "notice",
+      "dir": "server",
+      "message": {
+        "t": "notice",
+        "text": "Docente levantó la mano"
+      }
+    },
+    {
+      "name": "closed",
+      "dir": "server",
+      "message": {
+        "t": "closed",
+        "reason": "El anfitrión terminó la reunión"
+      }
+    },
+    {
+      "name": "kick",
+      "dir": "client",
+      "message": {
+        "t": "kick",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6"
+      }
+    },
+    {
+      "name": "set-role",
+      "dir": "client",
+      "message": {
+        "t": "set-role",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "role": "teacher"
+      }
+    },
+    {
+      "name": "present-start without source defaults to screen",
+      "dir": "client",
+      "message": {
+        "t": "present-start"
+      },
+      "parsed": {
+        "t": "present-start",
+        "source": "screen"
+      }
+    },
+    {
+      "name": "present-start window",
+      "dir": "client",
+      "message": {
+        "t": "present-start",
+        "source": "window"
+      }
+    },
+    {
+      "name": "present-start camera",
+      "dir": "client",
+      "message": {
+        "t": "present-start",
+        "source": "camera"
+      }
+    },
+    {
+      "name": "present-stop",
+      "dir": "client",
+      "message": {
+        "t": "present-stop"
+      }
+    },
+    {
+      "name": "leave",
+      "dir": "client",
+      "message": {
+        "t": "leave"
+      }
+    },
+    {
+      "name": "rtc",
+      "dir": "client",
+      "message": {
+        "t": "rtc",
+        "kind": "offer",
+        "data": "v=0"
+      }
+    },
+    {
+      "name": "rtc from host",
+      "dir": "server",
+      "message": {
+        "t": "rtc",
+        "kind": "ice",
+        "data": "{}"
+      }
+    },
+    {
+      "name": "media-mode",
+      "dir": "client",
+      "message": {
+        "t": "media-mode",
+        "relay": true,
+        "reason": "no-connect"
+      }
+    },
+    {
+      "name": "media-mode from host",
+      "dir": "server",
+      "message": {
+        "t": "media-mode",
+        "relay": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "hello v4",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 4,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "pc",
+        "caps": [
+          "relay",
+          "overlay",
+          "files"
+        ]
+      },
+      "why": "v must be 5"
+    },
+    {
+      "name": "hello without device",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "caps": [
+          "relay",
+          "overlay",
+          "files"
+        ]
+      },
+      "why": "device is required"
+    },
+    {
+      "name": "hello without caps",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "pc"
+      },
+      "why": "caps is required"
+    },
+    {
+      "name": "hello unknown device",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "tablet",
+        "caps": []
+      },
+      "why": "device is pc or phone"
+    },
+    {
+      "name": "hello unknown cap",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "pc",
+        "caps": [
+          "relay",
+          "mic"
+        ]
+      },
+      "why": "unknown cap"
+    },
+    {
+      "name": "hello too many caps",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "Alumno 4",
+        "device": "pc",
+        "caps": [
+          "files",
+          "files",
+          "files",
+          "files",
+          "files",
+          "files",
+          "files",
+          "files",
+          "files"
+        ]
+      },
+      "why": "caps max 8"
+    },
+    {
+      "name": "hello name too long",
+      "dir": "handshake",
+      "message": {
+        "t": "hello",
+        "v": 5,
+        "pub": "q83vASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4k=",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw==",
+        "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "device": "pc",
+        "caps": []
+      },
+      "why": "name max 64"
+    },
+    {
+      "name": "state without settings",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": []
+        }
+      },
+      "why": "settings is required"
+    },
+    {
+      "name": "state without presenterSource",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "presenterSource is required (nullable)"
+    },
+    {
+      "name": "state bad chat setting",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "some",
+            "share": "all",
+            "locked": false
+          }
+        }
+      },
+      "why": "chat is all, teachers or off"
+    },
+    {
+      "name": "participant without device",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "hand": null,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "device is required"
+    },
+    {
+      "name": "participant hand 0",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 0,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "hand is >= 1 or null"
+    },
+    {
+      "name": "participant hand missing",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "hand is required (nullable)"
+    },
+    {
+      "name": "participant pairedWith missing",
+      "dir": "server",
+      "message": {
+        "t": "state",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "pairedWith is required (nullable)"
+    },
+    {
+      "name": "present-start bad source",
+      "dir": "client",
+      "message": {
+        "t": "present-start",
+        "source": "tab"
+      },
+      "why": "source is screen, window or camera"
+    },
+    {
+      "name": "set-role creator",
+      "dir": "client",
+      "message": {
+        "t": "set-role",
+        "target": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "role": "creator"
+      },
+      "why": "creator cannot be assigned"
+    },
+    {
+      "name": "unknown t",
+      "dir": "client",
+      "message": {
+        "t": "evil"
+      },
+      "why": "unknown message"
+    },
+    {
+      "name": "host-only message from a client",
+      "dir": "client",
+      "message": {
+        "t": "welcome",
+        "you": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+        "state": {
+          "sessionId": "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+          "name": "Matemática II",
+          "participants": [
+            {
+              "id": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+              "name": "Docente",
+              "role": "creator",
+              "host": true,
+              "device": "pc",
+              "hand": null,
+              "pairedWith": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"
+            },
+            {
+              "id": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+              "name": "Galaxy de Docente",
+              "role": "participant",
+              "device": "phone",
+              "hand": null,
+              "pairedWith": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f"
+            },
+            {
+              "id": "c3d4e5f6-a7b8-4c9d-8e0f-a1b2c3d4e5f6",
+              "name": "Alumno 4",
+              "role": "participant",
+              "device": "pc",
+              "hand": 1,
+              "pairedWith": null
+            }
+          ],
+          "presenter": "0b6c1f2e-8a4d-4c3b-9e5f-1a2b3c4d5e6f",
+          "presenterSource": "window",
+          "controls": [],
+          "settings": {
+            "chat": "all",
+            "share": "teachers",
+            "locked": false
+          }
+        }
+      },
+      "why": "welcome is host -> client only"
+    },
+    {
+      "name": "client-only message from the host",
+      "dir": "server",
+      "message": {
+        "t": "present-start"
+      },
+      "why": "present-start is client -> host only"
+    },
+    {
+      "name": "media-mode relay false",
+      "dir": "client",
+      "message": {
+        "t": "media-mode",
+        "relay": false
+      },
+      "why": "relay must be true"
+    }
+  ]
+}
