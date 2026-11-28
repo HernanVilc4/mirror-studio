@@ -125,8 +125,8 @@ fun ControlScreen(viewModel: RoomViewModel, target: String, track: VideoTrack?, 
                 .pointerInput(mode, frame) {
                     if (mode != Mode.TAP) return@pointerInput
                     detectTapGestures(
-                        onTap = { p -> imagePoint(p.x, p.y, size.width.toFloat(), size.height.toFloat(), frame)?.let { (x, y) -> move(x, y); click() } },
-                        onLongPress = { p -> imagePoint(p.x, p.y, size.width.toFloat(), size.height.toFloat(), frame)?.let { (x, y) -> move(x, y); tick(); click(MouseButtonKind.RIGHT) } }
+                        onTap = { p -> imagePoint(p.x, p.y, size.width.toFloat(), size.height.toFloat(), frame)?.let { (x, y) -> cursorX = x; cursorY = y; viewModel.tapAt(x, y, MouseButtonKind.LEFT) } },
+                        onLongPress = { p -> imagePoint(p.x, p.y, size.width.toFloat(), size.height.toFloat(), frame)?.let { (x, y) -> cursorX = x; cursorY = y; tick(); viewModel.tapAt(x, y, MouseButtonKind.RIGHT) } }
                     )
                 },
             contentAlignment = Alignment.Center

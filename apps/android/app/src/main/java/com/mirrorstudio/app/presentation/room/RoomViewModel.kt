@@ -69,4 +69,18 @@ class RoomViewModel(private val repository: KtorMeetingRepository) : ViewModel()
     fun stopControl() { viewModelScope.launch { repository.stopControl() } }
     fun resetControl() { viewModelScope.launch { repository.resetControl() } }
     fun send(input: ControlInput) { viewModelScope.launch { repository.sendControl(input) } }
+
+    /**
+     * «Tocar la imagen»: lleva el puntero al punto tocado y recien despues hace clic. Si el movimiento y el clic salen
+     * juntos, Windows toma el clic antes de que el puntero llegue y solo se ve moverse el cursor.
+     */
+    fun tapAt(x: Float, y: Float, button: com.mirrorstudio.protocol.MouseButtonKind) {
+        viewModelScope.launch {
+            repository.sendControl(com.mirrorstudio.protocol.MouseMove(x.toDouble(), y.toDouble()))
+            kotlinx.coroutines.delay(60)
+            repository.sendControl(com.mirrorstudio.protocol.MouseButton(button, true))
+            kotlinx.coroutines.delay(40)
+            repository.sendControl(com.mirrorstudio.protocol.MouseButton(button, false))
+        }
+    }
 }

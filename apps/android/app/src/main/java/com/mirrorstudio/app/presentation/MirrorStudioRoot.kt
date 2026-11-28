@@ -101,7 +101,8 @@ fun MirrorStudioRoot(
                             Dest.Home -> HomeScreen(
                                 koinViewModel(),
                                 onScan = { nav.push(Dest.Scan) },
-                                onJoinIp = { ip, port -> nav.push(Dest.JoinIp(ip, port)) }
+                                onJoinIp = { ip, port -> nav.push(Dest.JoinIp(ip, port)) },
+                                onReplayIntro = { anchor.playing = true; introDone = false }
                             )
                             is Dest.JoinIp -> {
                                 val vm: JoinViewModel = koinViewModel(key = "join")
